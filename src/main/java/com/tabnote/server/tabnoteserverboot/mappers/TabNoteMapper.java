@@ -28,6 +28,27 @@ public interface TabNoteMapper {
     @Update("update tab_notes set click=click+1 where tab_note_id=#{0}")
     void clickThis(@Param("0") String tab_note_id);
 
+    @Select("select count(*)/20+1 from tab_notes where lower(tab_note_name) like concat('%',#{key},'%') or lower(class_name) like concat('%',#{key},'%') or lower(tags) like concat('%',#{key},'%') or usr_id=(select id from user where name like concat('%',#{key},'%')) ")
+    Integer searchTabNotePages(@Param("key")String keyword);
+    @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where lower(tab_note_name) like concat('%',#{key},'%') or lower(class_name) like concat('%',#{key},'%') or lower(tags) like concat('%',#{key},'%') or usr_id=(select id from user where name like concat('%',#{key},'%')) order by date_time desc limit 20 offset #{start}")
+    List<TabNoteForList> searchTabNote(@Param("key")String keyword,@Param("start")Integer start);
+
+    @Select("select count(*)/20+1 from tab_notes where usr_id=(select id from user where name like concat('%',#{name},'%')) ")
+    Integer searchTabNoteByNamePages(@Param("name")String name);
+    @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where usr_id=(select id from user where name like concat('%',#{name},'%')) order by date_time desc limit 20 offset #{start}")
+    List<TabNoteForList> searchTabNoteByName(@Param("name")String name,@Param("start")Integer start);
+
+    @Select("select count(*)/20+1 from tab_notes where usr_id=#{id} ")
+    Integer searchTabNoteByIdPages(@Param("id")String id);
+    @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where usr_id=#{id} order by date_time desc limit 20 offset #{start}")
+    List<TabNoteForList> searchTabNoteById(@Param("id")String id,@Param("start")Integer start);
+
+    @Select("select count(*)/20+1 from tab_notes where class_name=#{class_name} ")
+    Integer searchTabNoteByClassPages(@Param("class_name")String className);
+    @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where class_name=#{class_name} order by date_time desc limit 20 offset #{start}")
+    List<TabNoteForList> searchTabNoteByClass(@Param("class_name")String className,@Param("start")Integer start);
+
+
     @Select("select count(*) from like_note where tab_note_id=#{t_id}")
     Integer getTabNoteLikeCount(@Param("t_id")String tab_note_id);
 

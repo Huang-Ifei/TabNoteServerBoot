@@ -34,17 +34,6 @@ public class TabNoteController {
         }
     }
 
-    @GetMapping("get_page_count")
-    public ResponseEntity<String> getPageCount(HttpServletRequest request) {
-        System.out.println(request.getRemoteAddr() + "get_page_count");
-        try {
-            return sendMes(tabNoteService.getPageCount());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return sendErr();
-        }
-    }
-
     @PostMapping("tab_note_add")
     public ResponseEntity<String> addTabNote(@RequestBody String requestBody, HttpServletRequest request) {
         System.out.println(request.getRemoteAddr() + "add_tab_note");
@@ -69,11 +58,23 @@ public class TabNoteController {
         }
     }
 
-    @GetMapping("tab_note_page")
-    public ResponseEntity<String> getTabNotePage(@RequestParam Integer page, HttpServletRequest request) {
+    @PostMapping("tab_note_page")
+    public ResponseEntity<String> getTabNotePage(@RequestBody String requestBody, HttpServletRequest request) {
         System.out.println(request.getRemoteAddr() + "tab_note_page");
         try {
-            return sendMes(tabNoteService.getPageTabNotes(page));
+            JSONObject jsonObject = JSONObject.parseObject(requestBody);
+
+            if (jsonObject.getString("type").equals("main")){
+                return sendMes(tabNoteService.getPageTabNotes(jsonObject.getInteger("page")));
+            } else if (jsonObject.getString("type").equals("search")){
+                return sendMes(tabNoteService.searchTabNote(jsonObject.getString("key_word"), jsonObject.getInteger("page")));
+            } else if (jsonObject.getString("type").equals("search_by_class")){
+                return sendMes(tabNoteService.searchTabNoteByClass(jsonObject.getString("class_name"), jsonObject.getInteger("page")));
+            } else if (jsonObject.getString("type").equals("search_by_id")){
+                return sendMes(tabNoteService.searchTabNoteById(jsonObject.getString("id"), jsonObject.getInteger("page")));
+            } else {
+                return sendErr();
+            }
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();

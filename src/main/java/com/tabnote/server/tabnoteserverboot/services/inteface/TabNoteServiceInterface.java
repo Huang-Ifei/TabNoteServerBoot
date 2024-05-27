@@ -21,4 +21,10 @@ public interface TabNoteServiceInterface {
     JSONObject deleteTabNote(String tabNoteId);
 
     JSONObject updateTabNote(String tab_note_id, String ip_address, String tab_note_name, String tags, String tab_note, String date_time);
+
+    JSONObject searchTabNote(String key, Integer page);
+
+    JSONObject searchTabNoteById(String id, Integer page);
+
+    JSONObject searchTabNoteByClass(String className, Integer page);
 }

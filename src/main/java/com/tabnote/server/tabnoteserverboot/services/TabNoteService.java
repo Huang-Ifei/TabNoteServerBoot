@@ -92,6 +92,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
+            returnJSON.put("pages",tabNoteMapper.getTabNotePages());
             returnJSON.put("response", "success");
         } catch (Exception e) {
             e.printStackTrace();
@@ -213,4 +214,104 @@ public class TabNoteService implements TabNoteServiceInterface {
         return returnJSON;
     }
 
+
+    @Override
+    public JSONObject searchTabNote(String key, Integer page) {
+        int start = (page - 1) * 20;
+        JSONObject returnJSON = new JSONObject();
+
+        try {
+            List<TabNoteForList> list = tabNoteMapper.searchTabNote(key,start);
+            returnJSON.putArray("list");
+            for (TabNoteForList tabNoteForList : list) {
+                JSONObject tabNoteJSON = new JSONObject();
+
+                tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
+                tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
+                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
+                tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
+                tabNoteJSON.put("tags", tabNoteForList.getTags());
+                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("click", tabNoteForList.getClick());
+                tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
+
+                returnJSON.getJSONArray("list").add(tabNoteJSON);
+            }
+            returnJSON.put("pages",tabNoteMapper.searchTabNotePages(key));
+
+            returnJSON.put("response", "success");
+        } catch (Exception e) {
+            e.printStackTrace();
+            returnJSON.put("response", "failed");
+        }
+        return returnJSON;
+    }
+
+
+    @Override
+    public JSONObject searchTabNoteById(String id, Integer page) {
+        int start = (page - 1) * 20;
+        JSONObject returnJSON = new JSONObject();
+
+        try {
+            List<TabNoteForList> list = tabNoteMapper.searchTabNoteById(id,start);
+            returnJSON.putArray("list");
+            for (TabNoteForList tabNoteForList : list) {
+                JSONObject tabNoteJSON = new JSONObject();
+
+                tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
+                tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
+                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
+                tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
+                tabNoteJSON.put("tags", tabNoteForList.getTags());
+                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("click", tabNoteForList.getClick());
+                tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
+
+                returnJSON.getJSONArray("list").add(tabNoteJSON);
+            }
+            returnJSON.put("pages",tabNoteMapper.searchTabNoteByIdPages(id));
+
+            returnJSON.put("response", "success");
+        } catch (Exception e) {
+            e.printStackTrace();
+            returnJSON.put("response", "failed");
+        }
+        return returnJSON;
+    }
+
+    @Override
+    public JSONObject searchTabNoteByClass(String className,Integer page) {
+        int start = (page - 1) * 20;
+        JSONObject returnJSON = new JSONObject();
+
+        try {
+            List<TabNoteForList> list = tabNoteMapper.searchTabNoteByClass(className,start);
+            returnJSON.putArray("list");
+            for (TabNoteForList tabNoteForList : list) {
+                JSONObject tabNoteJSON = new JSONObject();
+
+                tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
+                tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
+                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
+                tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
+                tabNoteJSON.put("tags", tabNoteForList.getTags());
+                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("click", tabNoteForList.getClick());
+                tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
+
+                returnJSON.getJSONArray("list").add(tabNoteJSON);
+            }
+            returnJSON.put("pages",tabNoteMapper.searchTabNoteByClassPages(className));
+
+            returnJSON.put("response", "success");
+        } catch (Exception e) {
+            e.printStackTrace();
+            returnJSON.put("response", "failed");
+        }
+        return returnJSON;
+    }
 }
