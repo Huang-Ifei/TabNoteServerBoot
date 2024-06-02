@@ -2,7 +2,9 @@ package com.tabnote.server.tabnoteserverboot.controller;
 
 
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.services.FileService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -18,37 +20,24 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 
 @CrossOrigin
-@Controller()
+@Controller
 public class FileController {
-    @PostMapping("insert_tab_note_file")
-    public ResponseEntity<String> accountImgSet(@RequestBody String requestBody, HttpServletRequest request) {
-        System.out.println("insertFile:" + request.getRemoteAddr());
-        try {
-            JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            return sendErr();
-            //return sendMes(accountService.setAccountImg(jsonObject.getString("id"),jsonObject.getString("token"),jsonObject.getString("base64Img")));
-        } catch (Exception e) {
-            return sendErr();
-        }
+    FileService fileService;
+    @Autowired
+    public void setFileService(FileService fileService) {
+        this.fileService = fileService;
     }
 
-    @GetMapping("get_tab_note_file")
-    public ResponseEntity<Resource> getTabNoteFile(@RequestParam String tab_note_id, HttpServletRequest request) {
+    @GetMapping("file_select")
+    public ResponseEntity<Resource> getTabNoteFile(@RequestParam String name, HttpServletRequest request) throws Exception {
         System.out.println("download file" + request.getRemoteAddr());
-
-        // 获取文件路径
-        String filePath = "tabNoteFiles/"+tab_note_id;
-
         // 创建Resource对象
-        Resource resource = new FileSystemResource(filePath);
-
+        Resource resource = new FileSystemResource("tabNoteFiles/" + name +".zip");
         // 设置下载文件头信息
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Disposition", "attachment; filename=" + resource.getFilename());
-
         // 创建ResponseEntity对象
         ResponseEntity<Resource> response = new ResponseEntity<>(resource, headers, HttpStatus.OK);
-
         // 返回ResponseEntity对象
         return response;
     }

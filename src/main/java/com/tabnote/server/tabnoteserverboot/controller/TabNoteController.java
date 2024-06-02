@@ -37,12 +37,18 @@ public class TabNoteController {
     @PostMapping("tab_note_add")
     public ResponseEntity<String> addTabNote(@RequestBody String requestBody, HttpServletRequest request) {
         System.out.println(request.getRemoteAddr() + "add_tab_note");
+        if (requestBody.length()>10*1024*1024){
+            return sendErr();
+        }
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             if (!jsonObject.containsKey("file")){
                 jsonObject.put("file","");
             }
-            return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), request.getRemoteAddr(), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"),jsonObject.getString("file")));
+            if (!jsonObject.containsKey("pics")){
+                jsonObject.putArray("pics");
+            }
+            return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), request.getRemoteAddr(), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"),jsonObject.getString("file"),jsonObject.getJSONArray("pics")));
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();

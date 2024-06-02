@@ -53,6 +53,9 @@ public class AccountController {
     @PostMapping("/account_img_set")
     public ResponseEntity<String> accountImgSet(@RequestBody String requestBody, HttpServletRequest request){
         System.out.println("accountImgSet:" + request.getRemoteAddr());
+        if (requestBody.length()>500*1024){
+            return sendErr();
+        }
         try{
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             return sendMes(accountService.setAccountImg(jsonObject.getString("id"),jsonObject.getString("token"),jsonObject.getString("base64Img")));

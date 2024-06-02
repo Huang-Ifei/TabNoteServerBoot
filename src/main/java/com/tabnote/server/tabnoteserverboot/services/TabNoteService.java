@@ -1,5 +1,6 @@
 package com.tabnote.server.tabnoteserverboot.services;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
@@ -37,6 +38,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     public void setAccountMapper(AccountMapper accountMapper) {
         this.accountMapper = accountMapper;
     }
+
     @Autowired
     public void setFileService(FileService fileService) {
         this.fileService = fileService;
@@ -97,7 +99,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages",tabNoteMapper.getTabNotePages());
+            returnJSON.put("pages", tabNoteMapper.getTabNotePages());
             returnJSON.put("response", "success");
         } catch (Exception e) {
             e.printStackTrace();
@@ -159,6 +161,8 @@ public class TabNoteService implements TabNoteServiceInterface {
             returnJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteId));
             returnJSON.put("click", tabNote.getClick());
             returnJSON.put("tab_note", tabNote.getTab_note());
+            returnJSON.put("file",tabNote.getFile());
+            returnJSON.put("imgs",tabNote.getImages());
             returnJSON.put("date_time", tabNote.getDate_time());
 
             returnJSON.put("response", "success");
@@ -171,27 +175,42 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note,String base64FileString) {
+    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(usr_id)) {
+                String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 
-                if (base64FileString.isEmpty()){
-                    String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                    String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
+                if (base64FileString.isEmpty() && imgs.isEmpty()) {
                     tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time);
                     returnJSON.put("response", "success");
-                }else{
-                    String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                    String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
+                } else {
+                    String fileName = "";
+                    JSONObject imgJson = new JSONObject();
+                    imgJson.putArray("images");
 
-                    if (fileService.insertFileWithOutIdCheck(tab_note_id,base64FileString)){
-                        tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time);
-                        returnJSON.put("response", "success");
-                    }else {
-                        returnJSON.put("response","file_input_failed");
+                    try{
+                        if (!imgs.isEmpty()){
+                            for(int i=0;i<imgs.size();i++){
+                                imgJson.getJSONArray("images").add(fileService.insertImgWithOutIdCheck(imgs.getString(i)));
+                            }
+                        }
+                    }catch (Exception e){
+                        returnJSON.put("response", "img_insert_failed");
+                        return returnJSON;
                     }
 
+                    try{
+                        if (!base64FileString.isEmpty()){
+                            fileName = String.valueOf(fileService.insertFileWithOutIdCheck(base64FileString));
+                        }
+                    }catch (Exception e){
+                        returnJSON.put("response", "img_insert_failed");
+                        return returnJSON;
+                    }
+                    tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time,fileName,imgJson.toString());
+                    returnJSON.put("response", "success");
                 }
             } else {
                 returnJSON.put("response", "token_check_failed");
@@ -240,7 +259,7 @@ public class TabNoteService implements TabNoteServiceInterface {
         JSONObject returnJSON = new JSONObject();
 
         try {
-            List<TabNoteForList> list = tabNoteMapper.searchTabNote(key,start);
+            List<TabNoteForList> list = tabNoteMapper.searchTabNote(key, start);
             returnJSON.putArray("list");
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
@@ -257,7 +276,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages",tabNoteMapper.searchTabNotePages(key));
+            returnJSON.put("pages", tabNoteMapper.searchTabNotePages(key));
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
@@ -268,12 +287,12 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject searchTabNoteWithCls(String className,String key, Integer page) {
+    public JSONObject searchTabNoteWithCls(String className, String key, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
 
         try {
-            List<TabNoteForList> list = tabNoteMapper.searchTabNoteWithCls(className,key,start);
+            List<TabNoteForList> list = tabNoteMapper.searchTabNoteWithCls(className, key, start);
             returnJSON.putArray("list");
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
@@ -290,7 +309,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages",tabNoteMapper.searchTabNoteWithClsPages(className,key));
+            returnJSON.put("pages", tabNoteMapper.searchTabNoteWithClsPages(className, key));
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
@@ -307,7 +326,7 @@ public class TabNoteService implements TabNoteServiceInterface {
         JSONObject returnJSON = new JSONObject();
 
         try {
-            List<TabNoteForList> list = tabNoteMapper.searchTabNoteById(id,start);
+            List<TabNoteForList> list = tabNoteMapper.searchTabNoteById(id, start);
             returnJSON.putArray("list");
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
@@ -324,7 +343,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages",tabNoteMapper.searchTabNoteByIdPages(id));
+            returnJSON.put("pages", tabNoteMapper.searchTabNoteByIdPages(id));
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
@@ -335,12 +354,12 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject searchTabNoteByClass(String className,Integer page) {
+    public JSONObject searchTabNoteByClass(String className, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
 
         try {
-            List<TabNoteForList> list = tabNoteMapper.searchTabNoteByClass(className,start);
+            List<TabNoteForList> list = tabNoteMapper.searchTabNoteByClass(className, start);
             returnJSON.putArray("list");
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
@@ -357,7 +376,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages",tabNoteMapper.searchTabNoteByClassPages(className));
+            returnJSON.put("pages", tabNoteMapper.searchTabNoteByClassPages(className));
 
             returnJSON.put("response", "success");
         } catch (Exception e) {

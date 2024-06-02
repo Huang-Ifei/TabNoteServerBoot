@@ -1,5 +1,7 @@
 package com.tabnote.server.tabnoteserverboot.models;
 
+import com.alibaba.fastjson2.JSONObject;
+
 public class TabNote {
 
     //由usr_id的hash code和date_time组成的tab_note_id
@@ -12,6 +14,33 @@ public class TabNote {
     private String tab_note;
     private String date_time;
     private Integer click;
+    private String file;
+    private String images;
+
+    public String getFile() {
+        if (file==null){
+            return "";
+        }
+        return file;
+    }
+
+    public void setFile(String file) {
+        this.file = file;
+    }
+
+    public JSONObject getImages() {
+        if (images==null|| images.isEmpty()){
+            JSONObject json = new JSONObject();
+            JSONObject imgJson = new JSONObject();
+            imgJson.putArray("images");
+            return json;
+        }
+        return JSONObject.parseObject(images);
+    }
+
+    public void setImages(String images) {
+        this.images = images;
+    }
 
     public Integer getClick() {
         return click;
