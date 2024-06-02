@@ -33,6 +33,12 @@ public interface TabNoteMapper {
     @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where lower(tab_note_name) like concat('%',#{key},'%') or lower(class_name) like concat('%',#{key},'%') or lower(tags) like concat('%',#{key},'%') or usr_id=(select id from user where name like concat('%',#{key},'%')) order by date_time desc limit 20 offset #{start}")
     List<TabNoteForList> searchTabNote(@Param("key")String keyword,@Param("start")Integer start);
 
+    @Select("select count(*)/20+1 from tab_notes where lower(tab_note_name) like concat('%',#{key},'%') or lower(class_name) like concat('%',#{key},'%') or lower(tags) like concat('%',#{key},'%') or usr_id=(select id from user where name like concat('%',#{key},'%')) and class_name=#{class_name}")
+    Integer searchTabNoteWithClsPages(@Param("class_name")String className,@Param("key")String keyword);
+    @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where (lower(tab_note_name) like concat('%',#{key},'%') or lower(class_name) like concat('%',#{key},'%') or lower(tags) like concat('%',#{key},'%') or usr_id=(select id from user where name like concat('%',#{key},'%'))) and class_name=#{class_name} order by date_time desc limit 20 offset #{start}")
+    List<TabNoteForList> searchTabNoteWithCls(@Param("class_name")String className,@Param("key")String keyword,@Param("start")Integer start);
+
+
     @Select("select count(*)/20+1 from tab_notes where usr_id=(select id from user where name like concat('%',#{name},'%')) ")
     Integer searchTabNoteByNamePages(@Param("name")String name);
     @Select("select tab_note_id,usr_id,class_name,tab_note_name,tags,date_time from tab_notes where usr_id=(select id from user where name like concat('%',#{name},'%')) order by date_time desc limit 20 offset #{start}")

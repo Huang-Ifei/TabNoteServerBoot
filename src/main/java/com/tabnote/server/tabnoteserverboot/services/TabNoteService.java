@@ -21,6 +21,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     TabNoteMapper tabNoteMapper;
     ClassMapper classMapper;
     AccountMapper accountMapper;
+    FileService fileService;
 
     @Autowired
     public void setTabNoteMapper(TabNoteMapper tabNoteMapper) {
@@ -35,6 +36,10 @@ public class TabNoteService implements TabNoteServiceInterface {
     @Autowired
     public void setAccountMapper(AccountMapper accountMapper) {
         this.accountMapper = accountMapper;
+    }
+    @Autowired
+    public void setFileService(FileService fileService) {
+        this.fileService = fileService;
     }
 
     @Override
@@ -166,14 +171,28 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note) {
+    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note,String base64FileString) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(usr_id)) {
-                String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
-                tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time);
-                returnJSON.put("response", "success");
+
+                if (base64FileString.isEmpty()){
+                    String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
+                    tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time);
+                    returnJSON.put("response", "success");
+                }else{
+                    String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
+
+                    if (fileService.insertFileWithOutIdCheck(tab_note_id,base64FileString)){
+                        tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time);
+                        returnJSON.put("response", "success");
+                    }else {
+                        returnJSON.put("response","file_input_failed");
+                    }
+
+                }
             } else {
                 returnJSON.put("response", "token_check_failed");
             }
@@ -239,6 +258,39 @@ public class TabNoteService implements TabNoteServiceInterface {
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
             returnJSON.put("pages",tabNoteMapper.searchTabNotePages(key));
+
+            returnJSON.put("response", "success");
+        } catch (Exception e) {
+            e.printStackTrace();
+            returnJSON.put("response", "failed");
+        }
+        return returnJSON;
+    }
+
+    @Override
+    public JSONObject searchTabNoteWithCls(String className,String key, Integer page) {
+        int start = (page - 1) * 20;
+        JSONObject returnJSON = new JSONObject();
+
+        try {
+            List<TabNoteForList> list = tabNoteMapper.searchTabNoteWithCls(className,key,start);
+            returnJSON.putArray("list");
+            for (TabNoteForList tabNoteForList : list) {
+                JSONObject tabNoteJSON = new JSONObject();
+
+                tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
+                tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
+                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
+                tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
+                tabNoteJSON.put("tags", tabNoteForList.getTags());
+                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("click", tabNoteForList.getClick());
+                tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
+
+                returnJSON.getJSONArray("list").add(tabNoteJSON);
+            }
+            returnJSON.put("pages",tabNoteMapper.searchTabNoteWithClsPages(className,key));
 
             returnJSON.put("response", "success");
         } catch (Exception e) {

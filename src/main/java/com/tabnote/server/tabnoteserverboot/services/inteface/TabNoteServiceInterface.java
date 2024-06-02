@@ -16,13 +16,15 @@ public interface TabNoteServiceInterface {
 
     JSONObject getTabNote(String tabNoteId);
 
-    JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note);
+    JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note,String base64FileString);
 
     JSONObject deleteTabNote(String tabNoteId);
 
     JSONObject updateTabNote(String tab_note_id, String ip_address, String tab_note_name, String tags, String tab_note, String date_time);
 
     JSONObject searchTabNote(String key, Integer page);
+
+    JSONObject searchTabNoteWithCls(String className, String key, Integer page);
 
     JSONObject searchTabNoteById(String id, Integer page);
 
