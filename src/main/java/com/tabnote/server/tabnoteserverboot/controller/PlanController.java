@@ -95,6 +95,18 @@ public class PlanController {
         }
     }
 
+    @PostMapping("/finish_plan")
+    public ResponseEntity<String> finishPlan(@RequestBody String requestBody, HttpServletRequest request) throws Exception {
+        System.out.println("MesType.finish_plan:" + request.getRemoteAddr());
+        try {
+            JSONObject jsonObject = JSONObject.parseObject(requestBody);
+            return sendMes(planService.finishPlanFromWeb(jsonObject.getString("plan_id"), jsonObject.getString("token"), jsonObject.getString("id"), jsonObject.getString("content"), jsonObject.getString("link"), jsonObject.getString("date")));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
     @PostMapping("/finish_plan_web")
     public ResponseEntity<String> finishPlanFromWeb(@RequestBody String requestBody, HttpServletRequest request) throws Exception {
         System.out.println("MesType.finish_plan_web:" + request.getRemoteAddr());
@@ -106,6 +118,19 @@ public class PlanController {
             return sendErr();
         }
     }
+
+    @PostMapping("/synchronous_plans")
+    public ResponseEntity<String> synchronousPlans(@RequestBody String requestBody, HttpServletRequest request) throws Exception {
+        System.out.println("MesType.synchronous_plans:" + request.getRemoteAddr());
+        try {
+            JSONObject jsonObject = JSONObject.parseObject(requestBody);
+            return sendMes(planService.synchronousPlans(jsonObject.getJSONArray("plans"), jsonObject.getString("id"), jsonObject.getString("token")));
+        }catch (Exception e) {
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
 
     private ResponseEntity<String> sendErr() {
         return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("");

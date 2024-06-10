@@ -6,6 +6,15 @@ public class Plan {
     private String content;
     private String date;
     private String link;
+    private boolean done;
+
+    public boolean getDone() {
+        return done;
+    }
+
+    public void setDone(boolean done) {
+        this.done = done;
+    }
 
     public String getPlan_id() {
         return plan_id;

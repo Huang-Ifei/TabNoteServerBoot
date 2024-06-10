@@ -1,13 +1,16 @@
 package com.tabnote.server.tabnoteserverboot.services;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.PlanMapper;
 import com.tabnote.server.tabnoteserverboot.models.Plan;
 import com.tabnote.server.tabnoteserverboot.services.inteface.PlanServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 @Service
@@ -84,7 +87,11 @@ public class PlanService implements PlanServiceInterface {
         JSONObject jsonObject = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(id)){
-                planMapper.addPlan(plan_id, id, content, link, date);
+                try{
+                    planMapper.addPlan(plan_id, id, content, link, date);
+                }catch (DuplicateKeyException e){
+
+                }
                 jsonObject.put("response","success");
             }else {
                 jsonObject.put("response","token_check_failed");
@@ -96,12 +103,13 @@ public class PlanService implements PlanServiceInterface {
         return jsonObject;
     }
 
+
     @Override
     public JSONObject addPlanFromWeb(String id, String token, String content, String link, String date){
         JSONObject jsonObject = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(id)){
-                String plan_id = content.hashCode()+""+System.currentTimeMillis();
+                String plan_id = id.hashCode()+""+content.hashCode()+link.hashCode()+date.hashCode();
                 planMapper.addPlan(plan_id, id, content, link, date);
                 jsonObject.put("response","success");
             }else {
@@ -154,12 +162,7 @@ public class PlanService implements PlanServiceInterface {
         JSONObject jsonObject = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(id)){
-                try{
-                    planMapper.deletePlan(plan_id);
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
-                planMapper.addHisPlan(his_plan_id, id, content, link, date);
+                planMapper.addHisPlan(his_plan_id);
                 jsonObject.put("response","success");
             }else {
                 jsonObject.put("response","token_check_failed");
@@ -176,15 +179,7 @@ public class PlanService implements PlanServiceInterface {
         JSONObject jsonObject = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(id)){
-                try{
-                    planMapper.deletePlan(plan_id);
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
-
-                String his_plan_id = content.hashCode()+""+System.currentTimeMillis();
-                planMapper.addHisPlan(his_plan_id, id, content, link, date);
-                jsonObject.put("response",his_plan_id);
+                planMapper.addHisPlan(plan_id);
             }else {
                 jsonObject.put("response","token_check_failed");
             }
@@ -194,4 +189,72 @@ public class PlanService implements PlanServiceInterface {
         }
         return jsonObject;
     }
+
+    @Override
+    public JSONObject synchronousPlans(JSONArray plans, String id, String token){
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.putArray("return_plan");
+        try {
+            if (accountMapper.tokenCheckIn(token).equals(id)){
+                List<Plan> cloudPlans = planMapper.getAllPlans(id);
+
+                for(int i=0;i<plans.size();i++){
+                    JSONObject plan = plans.getJSONObject(i);
+                    String plan_id = plan.getString("plan_id");
+                    String content = plan.getString("content");
+                    String link = plan.getString("link");
+                    String date = plan.getString("date");
+                    boolean done = plan.getBoolean("done");
+
+                    boolean find = false;
+                    int count = -1;
+
+                    for(Plan p : cloudPlans){
+                        count++;
+                        if (p.getPlan_id().equals(plan_id)){
+                            find = true;
+                            if (p.getContent().equals(content)&&p.getDate().equals(date)&&p.getLink().equals(link)&&p.getDone()==done){
+                                cloudPlans.remove(count);
+                                break;
+                            }else{
+                                //内容以客户端为准
+                                planMapper.resetPlan(plan_id,content,link,date);
+                                cloudPlans.get(count).setPlan_id(plan_id);
+                                cloudPlans.get(count).setContent(content);
+                                cloudPlans.get(count).setLink(link);
+                                cloudPlans.get(count).setDate(date);
+                                //是否完成以两个任意一个完成了就完成了,因为返回的是云端数据，这里只要不删除云端数据，返回的就会按照云端的来,所以如果是云端没done那么就要done，如果是客户端没done自然会返回数据
+                                if (!p.getDone()&&done){
+                                    planMapper.addHisPlan(plan_id);
+                                    cloudPlans.get(count).setDone(true);
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!find){
+                        planMapper.addPlan(plan_id,id,content,link,date);
+                    }
+                }
+
+                for (Plan map : cloudPlans){
+                    JSONObject note = new JSONObject();
+                    note.put("plan_id", map.getPlan_id());
+                    note.put("content", map.getContent());
+                    note.put("link", map.getLink());
+                    note.put("date", map.getDate());
+                    note.put("done",map.getDone());
+                    jsonObject.getJSONArray("return_plan").add(note);
+                }
+            }else {
+                jsonObject.put("response","token_check_failed");
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            jsonObject.put("response","failed");
+        }
+        return jsonObject;
+    }
+
 }

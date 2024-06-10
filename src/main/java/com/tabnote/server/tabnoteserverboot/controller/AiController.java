@@ -3,6 +3,8 @@ package com.tabnote.server.tabnoteserverboot.controller;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.define.AiList;
+import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
+import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.services.AiService;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,10 +29,18 @@ import static com.tabnote.server.tabnoteserverboot.define.AiList.*;
 @Controller
 public class AiController {
     AiServiceInterface aiService;
+
+    @Autowired
+    public void setAiMapper(AccountMapper accountMapper) {
+        this.accountMapper = accountMapper;
+    }
+    AccountMapper accountMapper;
+
     @Autowired
     public AiController(AiService aiService) {
         this.aiService = aiService;
     }
+
     @GetMapping("Ai_List")
     public ResponseEntity<String> getAiList(HttpServletRequest request) {
         System.out.println("GetAiList" + request.getRemoteAddr());
@@ -88,34 +98,45 @@ public class AiController {
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
-            //确定模型
-            String model = aiService.modelDefine(bodyJson);
-            //将请求JSON变为向API发送的JSON
-            JSONArray messages = bodyJson.getJSONArray("messages");
-            JSONObject requestJson = aiService.buildRequestJSON(messages,model);
-            StringBuffer sb = new StringBuffer();
-            //抄送给API
-            aiService.postAiMessagesToAPI(requestJson,response,sb);
-            response.getWriter().write("");
-            response.getWriter().flush();
-            if (!sb.isEmpty()){
-                System.out.println(requestJson.getJSONArray("contents").size());
-                if (messages.size() == 1 && bodyJson.containsKey("id")) {
-                    JSONObject messageJson = new JSONObject();
-                    messageJson.put("role","model");
-                    messageJson.put("content",sb.toString());
-                    messages.add(messageJson);
-                    response.getWriter().write(aiService.createMessages(messages,bodyJson.getString("id"),request.getRemoteAddr()+request.getRemotePort()));
-                    response.getWriter().flush();
-                } else if (messages.size() > 1&& bodyJson.containsKey("ai_ms_id")){
-                    JSONObject messageJson = new JSONObject();
-                    messageJson.put("role","model");
-                    messageJson.put("content",sb.toString());
-                    messages.add(messageJson);
-                    aiService.changeMessages(messages,bodyJson.getString("ai_ms_id"));
+            if (bodyJson.getString("id").equals(accountMapper.tokenCheckIn(bodyJson.getString("token")))) {
+                //确定模型
+                String model = aiService.modelDefine(bodyJson);
+                //将请求JSON变为向API发送的JSON
+                JSONArray messages = bodyJson.getJSONArray("messages");
+                JSONObject requestJson = aiService.buildRequestJSON(messages,model);
+                StringBuffer sb = new StringBuffer();
+                //抄送给API
+                aiService.postAiMessagesToAPI(requestJson,response,sb);
+                response.getWriter().write("");
+                response.getWriter().flush();
+                //如果ai反馈非空且，数据库操作
+                if (!sb.isEmpty()){
+                    if (messages.size() == 1 && bodyJson.containsKey("id")) {
+                        JSONObject messageJson = new JSONObject();
+                        messageJson.put("role","model");
+                        messageJson.put("content",sb.toString());
+                        messages.add(messageJson);
+                        response.getWriter().write(aiService.createMessages(messages,bodyJson.getString("id"),request.getRemoteAddr()+request.getRemotePort()));
+                        response.getWriter().flush();
+                    } else if (messages.size() > 1&& bodyJson.containsKey("ai_ms_id")){
+                        JSONObject messageJson = new JSONObject();
+                        messageJson.put("role","model");
+                        messageJson.put("content",sb.toString());
+                        messages.add(messageJson);
+                        aiService.changeMessages(messages,bodyJson.getString("ai_ms_id"));
+                    }
                 }
+            }else {
+                JSONObject returnJSON = new JSONObject();
+                JSONObject returnMessage = new JSONObject();
+                returnJSON.put("model", "server_security_admin");
+                returnMessage.put("content", "Token check failed，Please login again，token过期请重新登录");
+                returnJSON.put("message", returnMessage);
+                //把封装好的JSON送回
+                response.getWriter().write(returnJSON.toString());
+                response.getWriter().write("\n");
+                response.getWriter().flush();
             }
-
         } catch (Exception e) {
             e.printStackTrace();
             JSONObject returnJSON = new JSONObject();

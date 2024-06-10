@@ -1,5 +1,6 @@
 package com.tabnote.server.tabnoteserverboot.services.inteface;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 
 public interface PlanServiceInterface {
@@ -18,4 +19,7 @@ public interface PlanServiceInterface {
     JSONObject finishPlan(String plan_id, String token, String id, String his_plan_id, String content, String link, String date);
 
     JSONObject finishPlanFromWeb(String plan_id, String token, String id, String content, String link, String date);
+
+    JSONObject synchronousPlans(JSONArray plans, String id, String token);
+
 }
