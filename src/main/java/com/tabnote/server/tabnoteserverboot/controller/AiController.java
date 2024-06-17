@@ -111,14 +111,14 @@ public class AiController {
                 response.getWriter().flush();
                 //如果ai反馈非空且，数据库操作
                 if (!sb.isEmpty()){
-                    if (messages.size() == 1 && bodyJson.containsKey("id")) {
+                    if (messages.size() == 1 && bodyJson.containsKey("id") && (bodyJson.containsKey("ai_ms_id")&&bodyJson.getString("ai_ms_id").isEmpty())) {
                         JSONObject messageJson = new JSONObject();
                         messageJson.put("role","model");
                         messageJson.put("content",sb.toString());
                         messages.add(messageJson);
                         response.getWriter().write(aiService.createMessages(messages,bodyJson.getString("id"),request.getRemoteAddr()+request.getRemotePort()));
                         response.getWriter().flush();
-                    } else if (messages.size() > 1&& bodyJson.containsKey("ai_ms_id")){
+                    } else if (messages.size() > 1 || (bodyJson.containsKey("ai_ms_id")&&!bodyJson.getString("ai_ms_id").isEmpty()) ){
                         JSONObject messageJson = new JSONObject();
                         messageJson.put("role","model");
                         messageJson.put("content",sb.toString());

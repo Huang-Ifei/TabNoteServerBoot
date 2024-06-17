@@ -66,8 +66,13 @@ public class TabNoteService implements TabNoteServiceInterface {
     public JSONObject getPageCount() {
         JSONObject returnJSON = new JSONObject();
         try {
-            Integer pageCount = tabNoteMapper.getTabNotePages();
-            returnJSON.put("pageCount", pageCount);
+            int count = tabNoteMapper.getTabNotePages();
+            if (count % 20 == 0){
+                count = count / 20;
+            }else{
+                count = count / 20 +1;
+            }
+            returnJSON.put("pagesCount", count);
             returnJSON.put("response", "success");
         } catch (Exception e) {
             e.printStackTrace();
@@ -99,7 +104,13 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages", tabNoteMapper.getTabNotePages());
+            int count = tabNoteMapper.getTabNotePages();
+            if (count % 20 == 0){
+                count = count / 20;
+            }else{
+                count = count / 20 +1;
+            }
+            returnJSON.put("pages", count);
             returnJSON.put("response", "success");
         } catch (Exception e) {
             e.printStackTrace();
@@ -276,7 +287,13 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages", tabNoteMapper.searchTabNotePages(key));
+            int count = tabNoteMapper.searchTabNotePages(key);
+            if (count % 20 == 0){
+                count = count / 20;
+            }else{
+                count = count / 20 +1;
+            }
+            returnJSON.put("pages", count);
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
@@ -309,7 +326,13 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages", tabNoteMapper.searchTabNoteWithClsPages(className, key));
+            int count = tabNoteMapper.searchTabNoteWithClsPages(className, key);
+            if (count % 20 == 0){
+                count = count / 20;
+            }else{
+                count = count / 20 +1;
+            }
+            returnJSON.put("pages", count);
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
@@ -343,7 +366,13 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages", tabNoteMapper.searchTabNoteByIdPages(id));
+            int count = tabNoteMapper.searchTabNoteByIdPages(id);
+            if (count % 20 == 0){
+                count = count / 20;
+            }else{
+                count = count / 20 +1;
+            }
+            returnJSON.put("pages", count);
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
@@ -376,7 +405,13 @@ public class TabNoteService implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            returnJSON.put("pages", tabNoteMapper.searchTabNoteByClassPages(className));
+            int count = tabNoteMapper.searchTabNoteByClassPages(className);
+            if (count % 20 == 0){
+                count = count / 20;
+            }else{
+                count = count / 20 +1;
+            }
+            returnJSON.put("pages", count);
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
