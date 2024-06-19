@@ -11,7 +11,7 @@ public interface AiList {
             "Llama_3(敬请期待)"};
     String GENERATE_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=";
     String STREAM_API_URL =   "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?alt=sse&key=";
-    String GOOGLE_API_KEY = "AIzaSyA19Mm_rcp-tYUyaL8nDKclkVGb2lWvUOI";
+    String GOOGLE_API_KEY = "key";
     Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", 7890));
     int GEMINI_FLASH_MAX_DAILY_REQUEST = 1450;
     int GEMINI_PRO_MAX_DAILY_REQUEST = 45;

@@ -17,7 +17,6 @@ public interface TabNoteMapper {
     @Insert("insert into tab_notes (tab_note_id,usr_id,ip_address,class_name,tab_note_name,tags,tab_note,date_time,file,images) values (#{0},#{1},#{2},#{3},#{4},#{5},#{6},#{7},#{8},#{9});")
     void insertTabNoteWithFile(@Param("0") String tab_note_id,@Param("1") String usr_id,@Param("2") String ip_address,@Param("3") String class_name,@Param("4") String tab_note_name,@Param("5") String tags,@Param("6") String tab_note,@Param("7") String date_time,@Param("8") String file,@Param("9")String imgs);
 
-
     @Delete("delete from tab_notes where tab_note_id=#{0}")
     void deleteTabNote(@Param("0")String tab_note_id);
     //分类名称，用户id,tab_note_id不可更改
@@ -60,10 +59,10 @@ public interface TabNoteMapper {
     List<TabNoteForList> searchTabNoteByClass(@Param("class_name")String className,@Param("start")Integer start);
 
 
-    @Select("select count(*) from like_note where tab_note_id=#{t_id}")
+    @Select("select count(*) from like_note where tab_note_id=#{t_id};")
     Integer getTabNoteLikeCount(@Param("t_id")String tab_note_id);
 
-    @Insert("insert into like_note values (#{t_id},#{u_id},CURRENT_TIMESTAMP) y")
+    @Insert("insert into like_note values (#{t_id},#{u_id},CURRENT_TIMESTAMP);")
     void likeNote(@Param("t_id")String tab_note_id,@Param("u_id")String usr_id);
 
     @Insert("insert into click_note values (#{t_id},#{u_id},CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE date = CURRENT_TIMESTAMP;")
