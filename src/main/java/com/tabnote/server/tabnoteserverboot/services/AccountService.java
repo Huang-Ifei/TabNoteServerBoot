@@ -266,6 +266,7 @@ public class AccountService implements AccountServiceInterface {
                 resetIdMapper.updateLikeNote(id,new_id);
                 resetIdMapper.updateTabMess(id,new_id);
                 resetIdMapper.updateMessMess(id,new_id);
+                resetIdMapper.updateNoteAi(id,new_id);
 
                 File accountImg = new File("accountImg/"+id+".jpg");
                 if (accountImg.exists()){

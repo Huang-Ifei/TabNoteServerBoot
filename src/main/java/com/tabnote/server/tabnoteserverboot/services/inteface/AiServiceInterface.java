@@ -18,4 +18,10 @@ public interface AiServiceInterface {
     JSONObject getAiMessages(String aiMsId, String token);
 
     JSONObject getAiMessagesList(String usrId, String token);
+
+    JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId);
+
+    JSONObject getNoteAiHistory(String usrId, String token);
+
+    JSONObject getHistoryNoteAi(String noteAiId, String token);
 }

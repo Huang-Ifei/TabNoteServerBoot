@@ -27,6 +27,7 @@ import static com.tabnote.server.tabnoteserverboot.define.AiList.*;
 
 @CrossOrigin
 @Controller
+@RequestMapping("ai")
 public class AiController {
     AiServiceInterface aiService;
 
@@ -41,7 +42,7 @@ public class AiController {
         this.aiService = aiService;
     }
 
-    @GetMapping("Ai_List")
+    @GetMapping("list")
     public ResponseEntity<String> getAiList(HttpServletRequest request) {
         System.out.println("GetAiList" + request.getRemoteAddr());
         JSONObject jsonObject = new JSONObject();
@@ -55,7 +56,7 @@ public class AiController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(jsonObject.toString());
     }
 
-    @GetMapping("Ai_talk")
+    @GetMapping("talk")
     public void sendMess(@RequestParam String content, HttpServletRequest request, HttpServletResponse response) throws Exception {
         System.out.println(request.getRemoteAddr() + ":Ai_talk");
         try {
@@ -92,7 +93,53 @@ public class AiController {
         }
     }
 
-    @PostMapping("Ai_Messages")
+    @PostMapping("note")
+    public void getNoteAiRequest(HttpServletRequest request,HttpServletResponse response,@RequestBody String body) throws Exception{
+        System.out.println("note_ai");
+        try {
+            //变成JSON对象
+            JSONObject bodyJson = JSONObject.parseObject(body);
+            if (bodyJson.getString("id").equals(accountMapper.tokenCheckIn(bodyJson.getString("token")))) {
+                //确定模型
+                String model = aiService.modelDefine(bodyJson);
+                //将请求JSON变为向API发送的JSON
+                JSONArray messages = bodyJson.getJSONArray("messages");
+                JSONObject requestJson = aiService.buildRequestJSON(messages,model);
+                StringBuffer sb = new StringBuffer();
+                //抄送给API
+                aiService.postAiMessagesToAPI(requestJson,response,sb);
+                response.getWriter().write("");
+                response.getWriter().flush();
+                //如果ai反馈非空且，数据库操作
+                if (!sb.isEmpty()){
+
+                }
+            }else {
+                JSONObject returnJSON = new JSONObject();
+                JSONObject returnMessage = new JSONObject();
+                returnJSON.put("model", "server_security_admin");
+                returnMessage.put("content", "Token check failed，Please login again，token过期请重新登录");
+                returnJSON.put("message", returnMessage);
+                //把封装好的JSON送回
+                response.getWriter().write(returnJSON.toString());
+                response.getWriter().write("\n");
+                response.getWriter().flush();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject returnJSON = new JSONObject();
+            JSONObject returnMessage = new JSONObject();
+
+            returnMessage.put("content","failed");
+            returnJSON.put("message",returnMessage);
+            response.getWriter().write(returnJSON.toString());
+            response.getWriter().write("\n");
+            response.getWriter().flush();
+        }
+        response.getWriter().close();
+    }
+
+    @PostMapping("messages")
     public void sendMesses(HttpServletRequest request, HttpServletResponse response, @RequestBody String body) throws Exception {
         System.out.println(request.getRemoteAddr() + ":Ai_Messages");
         try {
@@ -151,7 +198,7 @@ public class AiController {
         response.getWriter().close();
     }
 
-    @PostMapping("get_ai_history")
+    @PostMapping("get_history")
     public ResponseEntity<String> getAiHistory(HttpServletRequest request,@RequestBody String body) throws Exception {
         System.out.println(request.getRemoteAddr() + ":get_ai_history");
         JSONObject requestJson = JSONObject.parseObject(body);
@@ -162,13 +209,45 @@ public class AiController {
         return sendMes(aiService.getAiMessagesList(id,token));
     }
 
-    @PostMapping("get_history_ai_messages")
+    @PostMapping("history")
     public ResponseEntity<String> getAiHistoryMessages(HttpServletRequest request,@RequestBody String body) throws Exception {
         System.out.println(request.getRemoteAddr() + ":get_history_ai_messages");
         JSONObject requestJson = JSONObject.parseObject(body);
         String ai_ms_id = requestJson.getString("ai_ms_id");
         String token = requestJson.getString("token");
         return sendMes(aiService.getAiMessages(ai_ms_id,token));
+    }
+
+    @PostMapping("note_sync")
+    public ResponseEntity<String> noteAiSync(HttpServletRequest request,@RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":note_sync");
+        try {
+            JSONObject bodyJson = JSONObject.parseObject(body);
+            return sendMes(aiService.noteAiSync(bodyJson.getString("note_ai_id"),bodyJson.getString("note"),bodyJson.getJSONArray("note_ticks"),bodyJson.getString("token"),bodyJson.getString("id")));
+        }catch (Exception e){
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
+    @PostMapping("get_note_history")
+    public ResponseEntity<String> getAiNoteHistory(HttpServletRequest request,@RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":get_ai_note_history");
+        JSONObject requestJson = JSONObject.parseObject(body);
+
+        String id = requestJson.getString("id");
+        String token = requestJson.getString("token");
+
+        return sendMes(aiService.getNoteAiHistory(id,token));
+    }
+
+    @PostMapping("note_history")
+    public ResponseEntity<String> getAiHistoryNote(HttpServletRequest request,@RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":get_history_ai_note");
+        JSONObject requestJson = JSONObject.parseObject(body);
+        String note_ai_id = requestJson.getString("note_ai_id");
+        String token = requestJson.getString("token");
+        return sendMes(aiService.getHistoryNoteAi(note_ai_id,token));
     }
 
     private ResponseEntity<String> sendErr() {

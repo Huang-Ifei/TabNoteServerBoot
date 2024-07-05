@@ -6,6 +6,8 @@ import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.models.AiMessages;
 import com.tabnote.server.tabnoteserverboot.models.AiMessagesForList;
+import com.tabnote.server.tabnoteserverboot.models.NoteAi;
+import com.tabnote.server.tabnoteserverboot.models.NoteAiForList;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -137,23 +139,23 @@ public class AiService implements AiServiceInterface {
                             responseJSON.append(temp.charAt(i));
                         }
                         System.out.println(responseJSON);
-                        //如果因为安全原因被拦截，返回重复信息
-                        if(responseJSON.toString().contains("\"finishReason\": \"SAFETY\"")){
+                        //如果因为安全原因被拦截
+                        if (responseJSON.toString().contains("\"finishReason\": \"SAFETY\"")) {
                             JSONObject returnJSON = new JSONObject();
                             JSONObject returnMessage = new JSONObject();
                             returnJSON.put("model", requestJson.getString("model"));
-                            returnMessage.put("content", "因为安全问题被驳回");
+                            returnMessage.put("content", "\n**因为安全问题，消息回复被暂停**");
                             returnJSON.put("message", returnMessage);
                             //添加到string buffer里面
-                            returnString.append("因为安全问题被驳回");
+                            returnString.append("\n**因为安全问题，消息回复被暂停**");
                             //把封装好的JSON送回
                             response.getWriter().write(returnJSON.toString());
                             response.getWriter().write("\n");
                             response.getWriter().flush();
-                        }else{
+                        } else {
                             JSONObject tempJSON = JSONObject.parseObject(responseJSON.toString());
-                            if (tempJSON != null ) {
-                                try{
+                            if (tempJSON != null) {
+                                try {
                                     String returnMess = tempJSON.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text");
                                     //封装
                                     JSONObject returnJSON = new JSONObject();
@@ -167,7 +169,7 @@ public class AiService implements AiServiceInterface {
                                     response.getWriter().write(returnJSON.toString());
                                     response.getWriter().write("\n");
                                     response.getWriter().flush();
-                                }catch (NullPointerException e){
+                                } catch (NullPointerException e) {
                                     break;
                                 }
                             }
@@ -176,9 +178,9 @@ public class AiService implements AiServiceInterface {
                 }
                 br.close();
             }
-        } else if (connection.getResponseCode() == 500||connection.getResponseCode() == 429) {
+        } else if (connection.getResponseCode() == 500 || connection.getResponseCode() == 429) {
             //500,429响应码降级
-            this.downgradeAiModel(requestJson,response,returnString);
+            this.downgradeAiModel(requestJson, response, returnString);
         } else {
             returnString.delete(0, returnString.length());
             System.out.println("err:" + connection.getResponseCode());
@@ -198,15 +200,16 @@ public class AiService implements AiServiceInterface {
         }
     }
 
+    //降级处理，要更改返回的model类型为对应类型，并重新交给postAiMessagesToAPI方法
     public void downgradeAiModel(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
         if (requestJson.getString("model").equals("models/gemini-1.5-pro-latest")) {
             System.out.println("try_change_flash_model");
             requestJson.put("model", "models/gemini-1.5-flash-latest");
-            postAiMessagesToAPI(requestJson, response,returnString);
+            postAiMessagesToAPI(requestJson, response, returnString);
         } else if (requestJson.getString("model").equals("models/gemini-1.5-flash-latest")) {
             System.out.println("try_change_1.0_model");
             requestJson.put("model", "models/gemini-pro");
-            postAiMessagesToAPI(requestJson, response,returnString);
+            postAiMessagesToAPI(requestJson, response, returnString);
         } else {
             //封装
             JSONObject returnJSON = new JSONObject();
@@ -221,16 +224,17 @@ public class AiService implements AiServiceInterface {
         }
     }
 
+    //创建新的对话，返回一个ai ms id
     @Override
     public String createMessages(JSONArray messages, String id, String ip) {
         String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        String aiMsId = String.valueOf(messages.hashCode()) + String.valueOf(id.hashCode()) +String.valueOf(ip.hashCode());
+        String aiMsId = String.valueOf(messages.hashCode()) + String.valueOf(id.hashCode()) + String.valueOf(ip.hashCode());
         String mainly;
         String firstContent = JSONObject.parseObject(messages.get(0).toString()).getString("content");
-        if ( firstContent.length()<20){
+        if (firstContent.length() < 20) {
             mainly = firstContent;
-        }else{
-            mainly = firstContent.substring(0, 20);
+        } else {
+            mainly = firstContent.substring(0, 18);
         }
         JSONObject contents = new JSONObject();
         contents.putArray("messages");
@@ -241,9 +245,10 @@ public class AiService implements AiServiceInterface {
             e.printStackTrace();
             return "";
         }
-        return "{\"response\":\""+aiMsId+"\"}";
+        return "{\"response\":\"" + aiMsId + "\"}";
     }
 
+    //同步对话内容
     @Override
     public void changeMessages(JSONArray messages, String aiMsId) {
         String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -257,24 +262,25 @@ public class AiService implements AiServiceInterface {
         }
     }
 
+    //使用id将所有某个对话的所有内容传回
     @Override
-    public JSONObject getAiMessages(String aiMsId,String token) {
+    public JSONObject getAiMessages(String aiMsId, String token) {
         JSONObject returnJSON = new JSONObject();
         returnJSON.putArray("messages");
         try {
             String id = accountMapper.tokenCheckIn(token);
             AiMessages aiMessages = aiMapper.getUsrAiMessages(aiMsId);
-            if (aiMessages!=null&&aiMessages.getUsr_id().equals(id)){
+            if (aiMessages != null && aiMessages.getUsr_id().equals(id)) {
                 System.out.println(aiMessages.getContents());
                 return JSONObject.parseObject(aiMessages.getContents());
-            }else {
+            } else {
                 System.out.println("凭证验证错误或ai的id失效");
                 JSONObject returnMessage = new JSONObject();
                 returnMessage.put("role", "model");
                 returnMessage.put("content", "token_failed");
                 returnJSON.getJSONArray("messages").add(returnMessage);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             JSONObject returnMessage = new JSONObject();
             returnMessage.put("role", "model");
@@ -284,6 +290,7 @@ public class AiService implements AiServiceInterface {
         return returnJSON;
     }
 
+    //使用usr id获取所有的对话及其主要的内容
     @Override
     public JSONObject getAiMessagesList(String usrId, String token) {
         JSONObject returnJSON = new JSONObject();
@@ -300,6 +307,92 @@ public class AiService implements AiServiceInterface {
 
                     returnJSON.getJSONArray("list").add(aimJSON);
                 }
+                returnJSON.put("response", "success");
+            } else {
+                returnJSON.put("response", "token_check_failed");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            returnJSON.put("response", "failed");
+        }
+        return returnJSON;
+    }
+
+    @Override
+    public JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId) {
+        JSONObject returnJSON = new JSONObject();
+        try {
+            if (accountMapper.tokenCheckIn(token).equals(usrId)) {
+                if (note_ai_id.isEmpty()) {
+                    String mainly;
+                    if (note.length() < 20) {
+                        mainly = note;
+                    } else {
+                        mainly = note.substring(0, 18);
+                    }
+                    String new_note_id = usrId.hashCode() + "" + System.currentTimeMillis();
+                    aiMapper.addNewNoteAI(new_note_id, usrId, mainly, note, note_ticks.toString());
+                    System.out.println(new_note_id);
+                    returnJSON.put("note_ai_id", new_note_id);
+                } else {
+                    if (note_ai_id.startsWith(String.valueOf(usrId.hashCode()))) {
+                        aiMapper.changeNoteAI(note, note_ticks.toString(), note_ai_id);
+                    }
+                }
+                returnJSON.put("response", "success");
+            } else {
+                returnJSON.put("response", "token_check_failed");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            returnJSON.put("response", "failed");
+        }
+
+        return returnJSON;
+    }
+
+    @Override
+    public JSONObject getNoteAiHistory(String usrId, String token) {
+        JSONObject returnJSON = new JSONObject();
+        returnJSON.putArray("list");
+        JSONArray list = returnJSON.getJSONArray("list");
+        try {
+            if (accountMapper.tokenCheckIn(token).equals(usrId)) {
+                List<NoteAiForList> usrNoteAiList = aiMapper.getUsrNoteAiList(usrId);
+                for (NoteAiForList noteAiForList : usrNoteAiList) {
+                    JSONObject jsonObject = new JSONObject();
+                    jsonObject.put("note_ai_id", noteAiForList.getNote_ai_id());
+                    jsonObject.put("mainly", noteAiForList.getMainly());
+                    jsonObject.put("date_time", noteAiForList.getDate_time());
+
+                    list.add(jsonObject);
+                }
+                returnJSON.put("response", "success");
+            } else {
+                returnJSON.put("response", "token_check_failed");
+            }
+        } catch (NullPointerException ee) {
+            returnJSON.put("response", "token_check_failed");
+        } catch (Exception e) {
+            returnJSON.put("response", "failed");
+            e.printStackTrace();
+        }
+        return returnJSON;
+    }
+
+    @Override
+    public JSONObject getHistoryNoteAi(String noteAiId, String token) {
+        JSONObject returnJSON = new JSONObject();
+        returnJSON.putArray("messages");
+        try {
+            String id = accountMapper.tokenCheckIn(token);
+            NoteAi noteAi = aiMapper.getUsrNoteAi(noteAiId);
+            if (noteAi.getUsr_id().equals(id)) {
+
+                returnJSON.put("note", noteAi.getNote());
+                returnJSON.getJSONArray("messages").addAll(JSONArray.parse(noteAi.getAi_mess()));
+                returnJSON.put("date_time", noteAi.getDate_time());
+
                 returnJSON.put("response", "success");
             } else {
                 returnJSON.put("response", "token_check_failed");

@@ -31,4 +31,6 @@ public interface ResetIdMapper {
     void updateTabMess(@Param("oldId")String oldId ,@Param("newId") String newId);
     @Update("update like_mess set usr_id=#{newId} where usr_id=#{oldId}")
     void updateMessMess(@Param("oldId")String oldId ,@Param("newId") String newId);
+    @Update("update note_ai set usr_id=#{newId} where usr_id=#{oldId}")
+    void updateNoteAi(@Param("oldId")String oldId ,@Param("newId") String newId);
 }
