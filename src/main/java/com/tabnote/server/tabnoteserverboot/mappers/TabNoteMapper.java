@@ -11,11 +11,11 @@ import java.util.List;
 @Mapper
 public interface TabNoteMapper {
     //id由用户id的hashcode和时间戳组成
-    @Insert("insert into tab_notes (tab_note_id,usr_id,ip_address,class_name,tab_note_name,tags,tab_note,date_time) values (#{0},#{1},#{2},#{3},#{4},#{5},#{6},#{7});")
-    void insertTabNote(@Param("0") String tab_note_id,@Param("1") String usr_id,@Param("2") String ip_address,@Param("3") String class_name,@Param("4") String tab_note_name,@Param("5") String tags,@Param("6") String tab_note,@Param("7") String date_time);
+    @Insert("insert into tab_notes (tab_note_id,usr_id,ip_address,class_name,tab_note_name,tags,tab_note,date_time,display) values (#{0},#{1},#{2},#{3},#{4},#{5},#{6},#{7},#{8});")
+    void insertTabNote(@Param("0") String tab_note_id,@Param("1") String usr_id,@Param("2") String ip_address,@Param("3") String class_name,@Param("4") String tab_note_name,@Param("5") String tags,@Param("6") String tab_note,@Param("7") String date_time,@Param("8")int display);
 
-    @Insert("insert into tab_notes (tab_note_id,usr_id,ip_address,class_name,tab_note_name,tags,tab_note,date_time,file,images) values (#{0},#{1},#{2},#{3},#{4},#{5},#{6},#{7},#{8},#{9});")
-    void insertTabNoteWithFile(@Param("0") String tab_note_id,@Param("1") String usr_id,@Param("2") String ip_address,@Param("3") String class_name,@Param("4") String tab_note_name,@Param("5") String tags,@Param("6") String tab_note,@Param("7") String date_time,@Param("8") String file,@Param("9")String imgs);
+    @Insert("insert into tab_notes (tab_note_id,usr_id,ip_address,class_name,tab_note_name,tags,tab_note,date_time,file,images,display) values (#{0},#{1},#{2},#{3},#{4},#{5},#{6},#{7},#{8},#{9},#{10});")
+    void insertTabNoteWithFile(@Param("0") String tab_note_id,@Param("1") String usr_id,@Param("2") String ip_address,@Param("3") String class_name,@Param("4") String tab_note_name,@Param("5") String tags,@Param("6") String tab_note,@Param("7") String date_time,@Param("8") String file,@Param("9")String imgs,@Param("10")int display);
 
     @Delete("delete from tab_notes where tab_note_id=#{0}")
     void deleteTabNote(@Param("0")String tab_note_id);

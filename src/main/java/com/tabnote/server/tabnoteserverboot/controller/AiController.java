@@ -38,7 +38,7 @@ public class AiController {
     AccountMapper accountMapper;
 
     @Autowired
-    public AiController(AiService aiService) {
+    public void setAiService(AiService aiService) {
         this.aiService = aiService;
     }
 
@@ -251,7 +251,7 @@ public class AiController {
     }
 
     private ResponseEntity<String> sendErr() {
-        return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("");
+        return ResponseEntity.badRequest().body("err");
     }
 
     private ResponseEntity<String> sendMes(JSONObject sendJSON) {

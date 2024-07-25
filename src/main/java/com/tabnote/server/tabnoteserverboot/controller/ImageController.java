@@ -1,10 +1,19 @@
 package com.tabnote.server.tabnoteserverboot.controller;
 
+import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.services.FileService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.io.IOException;
@@ -15,6 +24,42 @@ import java.nio.file.Path;
 @CrossOrigin
 @Controller
 public class ImageController {
+
+    private ResponseEntity<String> sendErr() {
+        return ResponseEntity.badRequest().body("err");
+    }
+
+    private ResponseEntity<String> sendMes(JSONObject sendJSON) {
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sendJSON.toString());
+    }
+
+    FileService fileService;
+    @Autowired
+    public void setFileService(FileService fileService) {
+        this.fileService = fileService;
+    }
+
+    @PostMapping("/upload_tab_note_img")
+    public ResponseEntity<String> uploadImg(HttpServletRequest request) {
+        System.out.println("upload_tb_img");
+        try{
+
+            MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+
+            System.out.println(multipartRequest.getMultiFileMap().toSingleValueMap().values().toArray().length);
+
+            MultipartFile file = multipartRequest.getFile(multipartRequest.getFileNames().next());
+
+            if(file.getSize()>1048576){
+                return sendErr();
+            }
+            return sendMes(fileService.saveImg(file));
+        }catch (Exception e){
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
     @GetMapping("/image")
     public ResponseEntity<byte[]> getImage(@RequestParam String name) throws Exception {
         byte[] bytes;

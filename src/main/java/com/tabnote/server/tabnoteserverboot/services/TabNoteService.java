@@ -174,6 +174,7 @@ public class TabNoteService implements TabNoteServiceInterface {
             returnJSON.put("tab_note", tabNote.getTab_note());
             returnJSON.put("file",tabNote.getFile());
             returnJSON.put("imgs",tabNote.getImages());
+            returnJSON.put("display",tabNote.getDisplay());
             returnJSON.put("date_time", tabNote.getDate_time());
 
             returnJSON.put("response", "success");
@@ -186,7 +187,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs) {
+    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs,int display) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(usr_id)) {
@@ -194,7 +195,7 @@ public class TabNoteService implements TabNoteServiceInterface {
                 String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 
                 if (base64FileString.isEmpty() && imgs.isEmpty()) {
-                    tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time);
+                    tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time,display);
                     returnJSON.put("response", "success");
                 } else {
                     String fileName = "";
@@ -220,7 +221,7 @@ public class TabNoteService implements TabNoteServiceInterface {
                         returnJSON.put("response", "img_insert_failed");
                         return returnJSON;
                     }
-                    tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time,fileName,imgJson.toString());
+                    tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time,fileName,imgJson.toString(),display);
                     returnJSON.put("response", "success");
                 }
             } else {

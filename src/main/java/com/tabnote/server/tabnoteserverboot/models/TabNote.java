@@ -16,6 +16,7 @@ public class TabNote {
     private Integer click;
     private String file;
     private String images;
+    private Integer display;
 
     public String getFile() {
         if (file==null){
@@ -112,5 +113,16 @@ public class TabNote {
 
     public void setDate_time(String date_time) {
         this.date_time = date_time;
+    }
+
+    public int getDisplay() {
+        if (display==null){
+            return 0;
+        }
+        return display;
+    }
+
+    public void setDisplay(int display) {
+        this.display = display;
     }
 }

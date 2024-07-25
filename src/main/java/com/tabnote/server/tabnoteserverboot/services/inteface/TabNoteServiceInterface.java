@@ -17,7 +17,7 @@ public interface TabNoteServiceInterface {
 
     JSONObject getTabNote(String tabNoteId);
 
-    JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs);
+    JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs,int display);
 
     JSONObject deleteTabNote(String tabNoteId);
 

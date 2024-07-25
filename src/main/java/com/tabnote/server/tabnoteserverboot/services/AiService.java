@@ -47,13 +47,23 @@ public class AiService implements AiServiceInterface {
     //确定模型
     @Override
     public String modelDefine(JSONObject bodyJson) {
-        String model = "models/gemini-1.5-flash-latest";
+        String model = "models/gemini-1.5-flash-001";
         if (bodyJson.containsKey("model") && bodyJson.containsKey("token")) {
-            if (bodyJson.getString("model").equals("gemini-1.5-pro-latest")) {
+            if (bodyJson.getString("model").startsWith("gemini-1.5-pro")) {
                 if (aiRequestCounter.proAiRequestCheck()) {
-                    model = "models/gemini-1.5-pro-latest";
+                    model = "models/gemini-1.5-pro-001";
                     return model;
                 }
+            }
+        }
+        if (bodyJson.containsKey("preview") && bodyJson.getBoolean("preview").equals(true)) {
+            if (bodyJson.getString("model").startsWith("gemini-1.5-pro")) {
+                if (aiRequestCounter.proAiRequestCheck()) {
+                    model = "models/gemini-1.5-pro-preview-0514";
+                    return model;
+                }
+            } else {
+                model = "models/gemini-1.5-flash-preview-0514";
             }
         }
         if (!aiRequestCounter.flashAiRequestCheck()) {
@@ -112,7 +122,7 @@ public class AiService implements AiServiceInterface {
         connection = (HttpURLConnection) uRL.openConnection(proxy);
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(8000);
-        connection.setReadTimeout(100000);
+        connection.setReadTimeout(180000);
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
@@ -121,28 +131,31 @@ public class AiService implements AiServiceInterface {
         os.flush();
         os.close();
         if (connection.getResponseCode() == 200) {
-            if (requestJson.getString("model").equals("models/gemini-1.5-pro-latest")) {
+            if (requestJson.getString("model").equals("models/gemini-1.5-pro-001")) {
                 aiRequestCounter.addProAiRequest();
-            } else if (requestJson.getString("model").equals("models/gemini-1.5-flash-latest")) {
+            } else if (requestJson.getString("model").equals("models/gemini-1.5-flash-001")) {
                 aiRequestCounter.addFlashAiRequest();
             }
+            System.out.println(requestJson.getString("model"));
             response.addHeader("content-type", "text/html;charset=utf-8");
 
             is = connection.getInputStream();
             if (null != is) {
+                Integer totalTokenCount = 0;
                 br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 String temp;
                 while (null != (temp = br.readLine())) {
                     if (!temp.equals("\n") && !temp.isEmpty()) {
                         StringBuffer responseJSON = new StringBuffer();
+                        //不解析"data:"
                         for (int i = 5; i < temp.length(); i++) {
                             responseJSON.append(temp.charAt(i));
                         }
                         System.out.println(responseJSON);
+                        JSONObject returnJSON = new JSONObject();
+                        JSONObject returnMessage = new JSONObject();
                         //如果因为安全原因被拦截
                         if (responseJSON.toString().contains("\"finishReason\": \"SAFETY\"")) {
-                            JSONObject returnJSON = new JSONObject();
-                            JSONObject returnMessage = new JSONObject();
                             returnJSON.put("model", requestJson.getString("model"));
                             returnMessage.put("content", "\n**因为安全问题，消息回复被暂停**");
                             returnJSON.put("message", returnMessage);
@@ -158,13 +171,12 @@ public class AiService implements AiServiceInterface {
                                 try {
                                     String returnMess = tempJSON.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text");
                                     //封装
-                                    JSONObject returnJSON = new JSONObject();
-                                    JSONObject returnMessage = new JSONObject();
                                     returnJSON.put("model", requestJson.getString("model"));
                                     returnMessage.put("content", returnMess);
                                     returnJSON.put("message", returnMessage);
                                     //添加到string buffer里面
                                     returnString.append(returnMess);
+                                    totalTokenCount = tempJSON.getJSONObject("usageMetadata").getInteger("totalTokenCount");
                                     //把封装好的JSON送回
                                     response.getWriter().write(returnJSON.toString());
                                     response.getWriter().write("\n");
@@ -202,13 +214,13 @@ public class AiService implements AiServiceInterface {
 
     //降级处理，要更改返回的model类型为对应类型，并重新交给postAiMessagesToAPI方法
     public void downgradeAiModel(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
-        if (requestJson.getString("model").equals("models/gemini-1.5-pro-latest")) {
+        if (requestJson.getString("model").equals("models/gemini-1.5-pro-001")) {
             System.out.println("try_change_flash_model");
-            requestJson.put("model", "models/gemini-1.5-flash-latest");
+            requestJson.put("model", "models/gemini-1.5-flash-001");
             postAiMessagesToAPI(requestJson, response, returnString);
-        } else if (requestJson.getString("model").equals("models/gemini-1.5-flash-latest")) {
+        } else if (requestJson.getString("model").equals("models/gemini-1.5-flash-001")) {
             System.out.println("try_change_1.0_model");
-            requestJson.put("model", "models/gemini-pro");
+            requestJson.put("model", "models/gemini-1.0-pro-002");
             postAiMessagesToAPI(requestJson, response, returnString);
         } else {
             //封装

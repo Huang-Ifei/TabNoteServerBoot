@@ -133,7 +133,7 @@ public class PlanController {
 
 
     private ResponseEntity<String> sendErr() {
-        return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("");
+        return ResponseEntity.badRequest().body("err");
     }
 
     private ResponseEntity<String> sendMes(JSONObject sendJSON) {

@@ -48,7 +48,7 @@ public class TabNoteController {
             if (!jsonObject.containsKey("pics")){
                 jsonObject.putArray("pics");
             }
-            return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), request.getRemoteAddr(), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"),jsonObject.getString("file"),jsonObject.getJSONArray("pics")));
+            return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), request.getRemoteAddr(), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"),jsonObject.getString("file"),jsonObject.getJSONArray("pics"),jsonObject.getInteger("display")));
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();
@@ -133,7 +133,7 @@ public class TabNoteController {
     }
 
     private ResponseEntity<String> sendErr() {
-        return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("");
+        return ResponseEntity.badRequest().body("err");
     }
 
     private ResponseEntity<String> sendMes(JSONObject sendJSON) {

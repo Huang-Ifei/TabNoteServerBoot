@@ -1,6 +1,5 @@
 package com.tabnote.server.tabnoteserverboot.controller;
 
-
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.services.FileService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,10 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 
 @CrossOrigin
 @Controller
