@@ -62,6 +62,9 @@ public interface TabNoteMapper {
     @Select("select count(*) from like_note where tab_note_id=#{t_id};")
     Integer getTabNoteLikeCount(@Param("t_id")String tab_note_id);
 
+    @Select("select count(*) from like_note where usr_id=#{u_id} and tab_note_id=#{t_id}")
+    Integer isLiked(@Param("t_id")String tab_note_id,@Param("u_id")String usr_id);
+
     @Insert("insert into like_note values (#{t_id},#{u_id},CURRENT_TIMESTAMP);")
     void likeNote(@Param("t_id")String tab_note_id,@Param("u_id")String usr_id);
 

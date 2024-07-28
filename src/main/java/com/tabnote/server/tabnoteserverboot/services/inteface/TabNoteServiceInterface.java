@@ -11,11 +11,9 @@ public interface TabNoteServiceInterface {
 
     JSONObject getPageTabNotes(int page);
 
-    JSONObject clickTabNote(String tabNoteId, String id, String token);
-
     JSONObject likeTabNote(String tabNoteId, String id, String token);
 
-    JSONObject getTabNote(String tabNoteId);
+    JSONObject getTabNote(String tabNoteId,String id,String token);
 
     JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs,int display);
 

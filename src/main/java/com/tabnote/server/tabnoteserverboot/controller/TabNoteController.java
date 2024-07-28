@@ -97,23 +97,13 @@ public class TabNoteController {
         }
     }
 
-    @GetMapping("tab_note")
-    public ResponseEntity<String> getTabNote(@RequestParam String id, HttpServletRequest request) {
+    @PostMapping("tab_note")
+    public ResponseEntity<String> getTabNote(@RequestBody String body, HttpServletRequest request) {
         System.out.println(request.getRemoteAddr() + "tab_note");
         try {
-            return sendMes(tabNoteService.getTabNote(id));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return sendErr();
-        }
-    }
+            JSONObject jsonObject = JSONObject.parseObject(body);
 
-    @PostMapping("tab_note_click")
-    public ResponseEntity<String> clickTabNote(@RequestBody String requestBody, HttpServletRequest request) {
-        System.out.println(request.getRemoteAddr() + "tab_note_click");
-        try {
-            JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            return sendMes(tabNoteService.clickTabNote(jsonObject.getString("tab_note_id"), jsonObject.getString("id"), jsonObject.getString("token")));
+            return sendMes(tabNoteService.getTabNote(jsonObject.getString("tabNoteId"), jsonObject.getString("id"), jsonObject.getString("token")));
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();

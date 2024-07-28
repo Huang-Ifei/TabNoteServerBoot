@@ -7,6 +7,7 @@ import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
 import com.tabnote.server.tabnoteserverboot.models.TabNote;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
+import com.tabnote.server.tabnoteserverboot.redis.LikeCount;
 import com.tabnote.server.tabnoteserverboot.services.inteface.TabNoteServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -23,6 +24,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     ClassMapper classMapper;
     AccountMapper accountMapper;
     FileService fileService;
+    LikeCount likeCount;
 
     @Autowired
     public void setTabNoteMapper(TabNoteMapper tabNoteMapper) {
@@ -42,6 +44,11 @@ public class TabNoteService implements TabNoteServiceInterface {
     @Autowired
     public void setFileService(FileService fileService) {
         this.fileService = fileService;
+    }
+
+    @Autowired
+    public void setLikeCount(LikeCount likeCount) {
+        this.likeCount = likeCount;
     }
 
     @Override
@@ -67,10 +74,10 @@ public class TabNoteService implements TabNoteServiceInterface {
         JSONObject returnJSON = new JSONObject();
         try {
             int count = tabNoteMapper.getTabNotePages();
-            if (count % 20 == 0){
+            if (count % 20 == 0) {
                 count = count / 20;
-            }else{
-                count = count / 20 +1;
+            } else {
+                count = count / 20 + 1;
             }
             returnJSON.put("pagesCount", count);
             returnJSON.put("response", "success");
@@ -83,12 +90,17 @@ public class TabNoteService implements TabNoteServiceInterface {
 
     @Override
     public JSONObject getPageTabNotes(int page) {
+        long startTime1 = System.currentTimeMillis();
+
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
 
         try {
             List<TabNoteForList> list = tabNoteMapper.getTabNote(start);
             returnJSON.putArray("list");
+
+            long startTime2 = System.currentTimeMillis();
+
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
 
@@ -98,17 +110,18 @@ public class TabNoteService implements TabNoteServiceInterface {
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
-                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("like_this", likeCount.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
                 tabNoteJSON.put("click", tabNoteForList.getClick());
                 tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
+            System.out.println("****JSON build time(ms)：" + (System.currentTimeMillis() - startTime2));
             int count = tabNoteMapper.getTabNotePages();
-            if (count % 20 == 0){
+            if (count % 20 == 0) {
                 count = count / 20;
-            }else{
-                count = count / 20 +1;
+            } else {
+                count = count / 20 + 1;
             }
             returnJSON.put("pages", count);
             returnJSON.put("response", "success");
@@ -116,26 +129,7 @@ public class TabNoteService implements TabNoteServiceInterface {
             e.printStackTrace();
             returnJSON.put("response", "failed");
         }
-        return returnJSON;
-    }
-
-    @Override
-    public JSONObject clickTabNote(String tabNoteId, String id, String token) {
-        JSONObject returnJSON = new JSONObject();
-        try {
-            if (accountMapper.tokenCheckIn(token).equals(id)) {
-                tabNoteMapper.clickNote(tabNoteId, id);
-                tabNoteMapper.clickThis(tabNoteId);
-                returnJSON.put("response", "success");
-            } else {
-                returnJSON.put("response", "token_check_failed");
-            }
-        } catch (DuplicateKeyException e) {
-            returnJSON.put("response", "click");
-        } catch (Exception e) {
-            returnJSON.put("response", "failed");
-            e.printStackTrace();
-        }
+        System.out.println("****get tab note time(ms)：" + (System.currentTimeMillis() - startTime1));
         return returnJSON;
     }
 
@@ -158,10 +152,23 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject getTabNote(String tabNoteId) {
+    public JSONObject getTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
 
         try {
+
+            if (!id.isEmpty() && !token.isEmpty() && accountMapper.tokenCheckIn(token).equals(id)) {
+                returnJSON.put("is_liked",tabNoteMapper.isLiked(tabNoteId, id));
+                try{
+                    tabNoteMapper.clickNote(tabNoteId, id);
+                    tabNoteMapper.clickThis(tabNoteId);
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }else{
+                returnJSON.put("is_liked",0);
+            }
+
             TabNote tabNote = tabNoteMapper.getTabNoteById(tabNoteId);
             returnJSON.put("usr_id", tabNote.getUsr_id());
             returnJSON.put("usr_name", accountMapper.getNameById(tabNote.getUsr_id()));
@@ -169,12 +176,12 @@ public class TabNoteService implements TabNoteServiceInterface {
             returnJSON.put("class_name", tabNote.getClass_name());
             returnJSON.put("tab_note_name", tabNote.getTab_note_name());
             returnJSON.put("tags", tabNote.getTags());
-            returnJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteId));
+            returnJSON.put("like_this", likeCount.getTabNoteLikeCount(tabNoteId));
             returnJSON.put("click", tabNote.getClick());
             returnJSON.put("tab_note", tabNote.getTab_note());
-            returnJSON.put("file",tabNote.getFile());
-            returnJSON.put("imgs",tabNote.getImages());
-            returnJSON.put("display",tabNote.getDisplay());
+            returnJSON.put("file", tabNote.getFile());
+            returnJSON.put("imgs", tabNote.getImages());
+            returnJSON.put("display", tabNote.getDisplay());
             returnJSON.put("date_time", tabNote.getDate_time());
 
             returnJSON.put("response", "success");
@@ -187,7 +194,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
-    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs,int display) {
+    public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs, int display) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (accountMapper.tokenCheckIn(token).equals(usr_id)) {
@@ -195,33 +202,33 @@ public class TabNoteService implements TabNoteServiceInterface {
                 String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 
                 if (base64FileString.isEmpty() && imgs.isEmpty()) {
-                    tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time,display);
+                    tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, display);
                     returnJSON.put("response", "success");
                 } else {
                     String fileName = "";
                     JSONObject imgJson = new JSONObject();
                     imgJson.putArray("images");
 
-                    try{
-                        if (!imgs.isEmpty()){
-                            for(int i=0;i<imgs.size();i++){
+                    try {
+                        if (!imgs.isEmpty()) {
+                            for (int i = 0; i < imgs.size(); i++) {
                                 imgJson.getJSONArray("images").add(fileService.insertImgWithOutIdCheck(imgs.getString(i)));
                             }
                         }
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         returnJSON.put("response", "img_insert_failed");
                         return returnJSON;
                     }
 
-                    try{
-                        if (!base64FileString.isEmpty()){
+                    try {
+                        if (!base64FileString.isEmpty()) {
                             fileName = String.valueOf(fileService.insertFileWithOutIdCheck(base64FileString));
                         }
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         returnJSON.put("response", "img_insert_failed");
                         return returnJSON;
                     }
-                    tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time,fileName,imgJson.toString(),display);
+                    tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, fileName, imgJson.toString(), display);
                     returnJSON.put("response", "success");
                 }
             } else {
@@ -282,17 +289,17 @@ public class TabNoteService implements TabNoteServiceInterface {
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
-                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("like_this", likeCount.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
                 tabNoteJSON.put("click", tabNoteForList.getClick());
                 tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
             int count = tabNoteMapper.searchTabNotePages(key);
-            if (count % 20 == 0){
+            if (count % 20 == 0) {
                 count = count / 20;
-            }else{
-                count = count / 20 +1;
+            } else {
+                count = count / 20 + 1;
             }
             returnJSON.put("pages", count);
 
@@ -321,17 +328,17 @@ public class TabNoteService implements TabNoteServiceInterface {
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
-                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("like_this", likeCount.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
                 tabNoteJSON.put("click", tabNoteForList.getClick());
                 tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
             int count = tabNoteMapper.searchTabNoteWithClsPages(className, key);
-            if (count % 20 == 0){
+            if (count % 20 == 0) {
                 count = count / 20;
-            }else{
-                count = count / 20 +1;
+            } else {
+                count = count / 20 + 1;
             }
             returnJSON.put("pages", count);
 
@@ -361,17 +368,17 @@ public class TabNoteService implements TabNoteServiceInterface {
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
-                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("like_this", likeCount.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
                 tabNoteJSON.put("click", tabNoteForList.getClick());
                 tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
             int count = tabNoteMapper.searchTabNoteByIdPages(id);
-            if (count % 20 == 0){
+            if (count % 20 == 0) {
                 count = count / 20;
-            }else{
-                count = count / 20 +1;
+            } else {
+                count = count / 20 + 1;
             }
             returnJSON.put("pages", count);
 
@@ -400,17 +407,17 @@ public class TabNoteService implements TabNoteServiceInterface {
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
-                tabNoteJSON.put("like_this", tabNoteMapper.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
+                tabNoteJSON.put("like_this", likeCount.getTabNoteLikeCount(tabNoteForList.getTab_note_id()));
                 tabNoteJSON.put("click", tabNoteForList.getClick());
                 tabNoteJSON.put("date_time", tabNoteForList.getDate_time());
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
             int count = tabNoteMapper.searchTabNoteByClassPages(className);
-            if (count % 20 == 0){
+            if (count % 20 == 0) {
                 count = count / 20;
-            }else{
-                count = count / 20 +1;
+            } else {
+                count = count / 20 + 1;
             }
             returnJSON.put("pages", count);
 
