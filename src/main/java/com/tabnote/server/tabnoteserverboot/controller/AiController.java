@@ -2,6 +2,7 @@ package com.tabnote.server.tabnoteserverboot.controller;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.define.AiList;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
@@ -40,6 +41,12 @@ public class AiController {
     @Autowired
     public void setAiService(AiService aiService) {
         this.aiService = aiService;
+    }
+
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+    @Autowired
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tabNoteInfiniteEncryption) {
+        this.tabNoteInfiniteEncryption = tabNoteInfiniteEncryption;
     }
 
     @GetMapping("list")
@@ -99,7 +106,8 @@ public class AiController {
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
-            if (bodyJson.getString("id").equals(accountMapper.tokenCheckIn(bodyJson.getString("token")))) {
+            //(bodyJson.getString("id").equals(accountMapper.tokenCheckIn(bodyJson.getString("token")))
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
                 //确定模型
                 String model = aiService.modelDefine(bodyJson);
                 //将请求JSON变为向API发送的JSON
@@ -145,7 +153,7 @@ public class AiController {
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
-            if (bodyJson.getString("id").equals(accountMapper.tokenCheckIn(bodyJson.getString("token")))) {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
                 //确定模型
                 String model = aiService.modelDefine(bodyJson);
                 //将请求JSON变为向API发送的JSON

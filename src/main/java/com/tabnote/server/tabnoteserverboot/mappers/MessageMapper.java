@@ -30,4 +30,8 @@ public interface MessageMapper {
     Integer getTabMessLikeCount(@Param("tm_id")String tab_mess_id);
     @Select("select count(*) from like_mess where message_id=#{mm_id}")
     Integer getMessMessLikeCount(@Param("mm_id")String mess_mess_id);
+    @Select("select count(*) from like_tab_mess where tab_message_id=#{tm_id} and usr_id=#{usr_id}")
+    Integer tabMessIsLiked(@Param("tm_id")String tab_mess_id,@Param("usr_id")String usr_id);
+    @Select("select count(*) from like_mess where message_id=#{mm_id} and usr_id=#{usr_id}")
+    Integer messMessIsLiked(@Param("mm_id")String mess_mess_id,@Param("usr_id")String usr_id);
 }

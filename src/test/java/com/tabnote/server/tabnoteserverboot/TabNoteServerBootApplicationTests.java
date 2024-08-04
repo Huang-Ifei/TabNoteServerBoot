@@ -1,6 +1,7 @@
 package com.tabnote.server.tabnoteserverboot;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
@@ -20,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import redis.clients.jedis.Jedis;
 
+import javax.crypto.Cipher;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -28,71 +30,35 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.List;
 
 
 @SpringBootTest
 class TabNoteServerBootApplicationTests {
-    TabNoteMapper tabNoteMapper;
-    ClassMapper classMapper;
-    AccountMapper accountMapper;
-    FileService fileService;
-    LikeCount likeCount;
-
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
     @Autowired
-    public void setTabNoteMapper(TabNoteMapper tabNoteMapper) {
-        this.tabNoteMapper = tabNoteMapper;
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tabNoteInfiniteEncryption) {
+        this.tabNoteInfiniteEncryption = tabNoteInfiniteEncryption;
     }
-
-    @Autowired
-    public void setClassMapper(ClassMapper classMapper) {
-        this.classMapper = classMapper;
-    }
-
-    @Autowired
-    public void setAccountMapper(AccountMapper accountMapper) {
-        this.accountMapper = accountMapper;
-    }
-
-    @Autowired
-    public void setFileService(FileService fileService) {
-        this.fileService = fileService;
-    }
-
-    @Autowired
-    public void setLikeCount(LikeCount likeCount) {
-        this.likeCount = likeCount;
-    }
-
 
     @Test
-    public void testConnect() throws Exception {
-        for(int i=0;i<5;i++){
-            testGet();
-            Thread.sleep(6000-i*1100);
-        }
-    }
+    void contextLoads() throws Exception {
+        String token = "335095445-1835880332";
 
-    public void testGet(){
-        int page = 2;
+        PublicKey publicKey = KeyFactory.getInstance("RSA")
+                .generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(tabNoteInfiniteEncryption.getPublicKey())));
 
-        int start = (page - 1) * 20;
-        JSONObject returnJSON = new JSONObject();
-
-        try {
-            List<TabNoteForList> list = tabNoteMapper.getTabNote(start);
-
-            long startTime2 = System.currentTimeMillis();
-
-            for (TabNoteForList tabNoteForList : list) {
-                likeCount.getTabNoteLikeCount(tabNoteForList.getTab_note_id());
-            }
-            System.out.println("****JSON build time(ms)：" + (System.currentTimeMillis() - startTime2));
-        } catch (Exception e) {
-            e.printStackTrace();
-            returnJSON.put("response", "failed");
-        }
+        Cipher encryptCipher = Cipher.getInstance("RSA");
+        encryptCipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        byte[] encryptedBytes = encryptCipher.doFinal(token.getBytes());
+        System.out.println(Base64.getEncoder().encodeToString(encryptedBytes));
+        System.out.println(tabNoteInfiniteEncryption.encryptionTokenCheckIn("13023878240",Base64.getEncoder().encodeToString(encryptedBytes)));
     }
 }
 

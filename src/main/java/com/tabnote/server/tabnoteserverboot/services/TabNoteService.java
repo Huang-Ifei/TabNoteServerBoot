@@ -2,6 +2,7 @@ package com.tabnote.server.tabnoteserverboot.services;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
@@ -12,6 +13,7 @@ import com.tabnote.server.tabnoteserverboot.services.inteface.TabNoteServiceInte
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -49,6 +51,12 @@ public class TabNoteService implements TabNoteServiceInterface {
     @Autowired
     public void setLikeCount(LikeCount likeCount) {
         this.likeCount = likeCount;
+    }
+
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+    @Autowired
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
+        this.tabNoteInfiniteEncryption = tie;
     }
 
     @Override
@@ -137,8 +145,8 @@ public class TabNoteService implements TabNoteServiceInterface {
     public JSONObject likeTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)) {
-                tabNoteMapper.likeNote(tabNoteId, id);
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)) {
+                likeCount.likeTabNote(tabNoteId,id);
             } else {
                 returnJSON.put("response", "token_check_failed");
             }
@@ -151,13 +159,14 @@ public class TabNoteService implements TabNoteServiceInterface {
         return returnJSON;
     }
 
+    @Transactional(rollbackFor = Exception.class,noRollbackFor = {NullPointerException.class})
     @Override
     public JSONObject getTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
 
         try {
 
-            if (!id.isEmpty() && !token.isEmpty() && accountMapper.tokenCheckIn(token).equals(id)) {
+            if (!id.isEmpty() && !token.isEmpty() && tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)) {
                 returnJSON.put("is_liked",tabNoteMapper.isLiked(tabNoteId, id));
                 try{
                     tabNoteMapper.clickNote(tabNoteId, id);
@@ -168,7 +177,6 @@ public class TabNoteService implements TabNoteServiceInterface {
             }else{
                 returnJSON.put("is_liked",0);
             }
-
             TabNote tabNote = tabNoteMapper.getTabNoteById(tabNoteId);
             returnJSON.put("usr_id", tabNote.getUsr_id());
             returnJSON.put("usr_name", accountMapper.getNameById(tabNote.getUsr_id()));
@@ -197,7 +205,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs, int display) {
         JSONObject returnJSON = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(usr_id)) {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id,token)) {
                 String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                 String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 

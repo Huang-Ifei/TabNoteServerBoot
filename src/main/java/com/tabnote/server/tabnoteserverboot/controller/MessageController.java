@@ -4,7 +4,6 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.services.MessageService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -51,7 +50,7 @@ public class MessageController {
         System.out.println(request.getRemoteAddr() + "tab_note_mess");
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            return sendMes(messageService.getTabNoteMessage(jsonObject.getString("tab_note_id"), jsonObject.getInteger("start")));
+            return sendMes(messageService.getTabNoteMessage(jsonObject.getString("tab_note_id"), jsonObject.getInteger("start"),jsonObject.getString("usr_id")));
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();
@@ -63,7 +62,7 @@ public class MessageController {
         System.out.println(request.getRemoteAddr() + "mess_mess");
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            return sendMes(messageService.getMessageMessage(jsonObject.getString("from_tab_mess"), jsonObject.getInteger("start")));
+            return sendMes(messageService.getMessageMessage(jsonObject.getString("from_tab_mess"), jsonObject.getInteger("start"),jsonObject.getString("usr_id")));
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();

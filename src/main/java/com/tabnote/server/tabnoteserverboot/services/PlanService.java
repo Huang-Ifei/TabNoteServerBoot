@@ -2,6 +2,7 @@ package com.tabnote.server.tabnoteserverboot.services;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.PlanMapper;
 import com.tabnote.server.tabnoteserverboot.models.Plan;
@@ -27,12 +28,18 @@ public class PlanService implements PlanServiceInterface {
         this.planMapper = planMapper;
     }
 
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+    @Autowired
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
+        this.tabNoteInfiniteEncryption = tie;
+    }
+
     @Override
     public JSONObject getPlans(String id, String token){
         JSONObject jsonObject = new JSONObject();
         jsonObject.putArray("plans");
         try{
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 List<Plan> maps = planMapper.getPlans(id);
                 System.out.println(maps.size());
                 for (Plan map : maps){
@@ -60,7 +67,7 @@ public class PlanService implements PlanServiceInterface {
         JSONObject jsonObject = new JSONObject();
         jsonObject.putArray("his_notes");
         try{
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 List<Plan> maps = planMapper.getHisPlans(id);
                 for (Plan map : maps){
                     JSONObject note = new JSONObject();
@@ -86,7 +93,7 @@ public class PlanService implements PlanServiceInterface {
     public JSONObject addPlan(String plan_id, String id, String token, String content, String link, String date){
         JSONObject jsonObject = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 try{
                     planMapper.addPlan(plan_id, id, content, link, date);
                 }catch (DuplicateKeyException e){
@@ -108,7 +115,7 @@ public class PlanService implements PlanServiceInterface {
     public JSONObject addPlanFromWeb(String id, String token, String content, String link, String date){
         JSONObject jsonObject = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 String plan_id = id.hashCode()+""+content.hashCode()+link.hashCode()+date.hashCode();
                 planMapper.addPlan(plan_id, id, content, link, date);
                 jsonObject.put("response","success");
@@ -126,7 +133,7 @@ public class PlanService implements PlanServiceInterface {
     public JSONObject resetPlan(String plan_id, String token, String id, String content, String link, String date){
         JSONObject jsonObject = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 System.out.println(plan_id);
                 planMapper.resetPlan(plan_id,content,link,date);
                 jsonObject.put("response","success");
@@ -144,7 +151,7 @@ public class PlanService implements PlanServiceInterface {
     public JSONObject deletePlan(String plan_id, String token, String id){
         JSONObject jsonObject = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 planMapper.deletePlan(plan_id);
                 jsonObject.put("response","success");
             }else {
@@ -161,7 +168,7 @@ public class PlanService implements PlanServiceInterface {
     public JSONObject finishPlan(String plan_id, String token, String id, String his_plan_id, String content, String link, String date){
         JSONObject jsonObject = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 planMapper.addHisPlan(his_plan_id);
                 jsonObject.put("response","success");
             }else {
@@ -178,7 +185,7 @@ public class PlanService implements PlanServiceInterface {
     public JSONObject finishPlanFromWeb(String plan_id, String token, String id, String content, String link, String date){
         JSONObject jsonObject = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 planMapper.addHisPlan(plan_id);
             }else {
                 jsonObject.put("response","token_check_failed");
@@ -195,7 +202,7 @@ public class PlanService implements PlanServiceInterface {
         JSONObject jsonObject = new JSONObject();
         jsonObject.putArray("return_plan");
         try {
-            if (accountMapper.tokenCheckIn(token).equals(id)){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 List<Plan> cloudPlans = planMapper.getAllPlans(id);
 
                 for(int i=0;i<plans.size();i++){

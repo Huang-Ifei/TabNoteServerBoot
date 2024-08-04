@@ -1,4 +1,4 @@
-package com.tabnote.server.tabnoteserverboot;
+package com.tabnote.server.tabnoteserverboot.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

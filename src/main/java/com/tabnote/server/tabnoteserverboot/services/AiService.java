@@ -2,6 +2,7 @@ package com.tabnote.server.tabnoteserverboot.services;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.models.AiMessages;
@@ -42,6 +43,12 @@ public class AiService implements AiServiceInterface {
     @Autowired
     public void setMapper(AccountMapper accountMapper) {
         this.accountMapper = accountMapper;
+    }
+
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+    @Autowired
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
+        this.tabNoteInfiniteEncryption = tie;
     }
 
     //确定模型
@@ -280,9 +287,8 @@ public class AiService implements AiServiceInterface {
         JSONObject returnJSON = new JSONObject();
         returnJSON.putArray("messages");
         try {
-            String id = accountMapper.tokenCheckIn(token);
             AiMessages aiMessages = aiMapper.getUsrAiMessages(aiMsId);
-            if (aiMessages != null && aiMessages.getUsr_id().equals(id)) {
+            if (aiMessages != null && aiMessages.getUsr_id().equals(tabNoteInfiniteEncryption.encryptionTokenGetId(token))) {
                 System.out.println(aiMessages.getContents());
                 return JSONObject.parseObject(aiMessages.getContents());
             } else {
@@ -307,7 +313,7 @@ public class AiService implements AiServiceInterface {
     public JSONObject getAiMessagesList(String usrId, String token) {
         JSONObject returnJSON = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(usrId)) {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usrId, token)) {
                 returnJSON.putArray("list");
 
                 List<AiMessagesForList> list = aiMapper.getUsrAiList(usrId);
@@ -334,7 +340,7 @@ public class AiService implements AiServiceInterface {
     public JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId) {
         JSONObject returnJSON = new JSONObject();
         try {
-            if (accountMapper.tokenCheckIn(token).equals(usrId)) {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usrId, token)) {
                 if (note_ai_id.isEmpty()) {
                     String mainly;
                     if (note.length() < 20) {
@@ -369,7 +375,7 @@ public class AiService implements AiServiceInterface {
         returnJSON.putArray("list");
         JSONArray list = returnJSON.getJSONArray("list");
         try {
-            if (accountMapper.tokenCheckIn(token).equals(usrId)) {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usrId, token)) {
                 List<NoteAiForList> usrNoteAiList = aiMapper.getUsrNoteAiList(usrId);
                 for (NoteAiForList noteAiForList : usrNoteAiList) {
                     JSONObject jsonObject = new JSONObject();
@@ -397,7 +403,7 @@ public class AiService implements AiServiceInterface {
         JSONObject returnJSON = new JSONObject();
         returnJSON.putArray("messages");
         try {
-            String id = accountMapper.tokenCheckIn(token);
+            String id = tabNoteInfiniteEncryption.encryptionTokenGetId(token);
             NoteAi noteAi = aiMapper.getUsrNoteAi(noteAiId);
             if (noteAi.getUsr_id().equals(id)) {
 

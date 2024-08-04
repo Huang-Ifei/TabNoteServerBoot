@@ -1,6 +1,8 @@
 package com.tabnote.server.tabnoteserverboot.services;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.Cryptic;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ResetIdMapper;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AccountServiceInterface;
@@ -28,6 +30,11 @@ public class AccountService implements AccountServiceInterface {
     @Autowired
     public void setResetIdMapper(ResetIdMapper resetIdMapper) {
         this.resetIdMapper = resetIdMapper;
+    }
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+    @Autowired
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
+        this.tabNoteInfiniteEncryption = tie;
     }
 
     //账号查重
@@ -58,7 +65,8 @@ public class AccountService implements AccountServiceInterface {
     public JSONObject passwordCheck(String password) {
         JSONObject json = new JSONObject();
         try {
-            if (password!=null  && password.length()<=16 && password.length()>=5) {
+            String pwd = tabNoteInfiniteEncryption.decrypt(password);
+            if ( pwd !=null  &&  pwd.length()<=16 &&  pwd.length()>=5) {
                 json.put("response", "ok");
             }else{
                 json.put("response", "password_is_bad");
@@ -104,7 +112,7 @@ public class AccountService implements AccountServiceInterface {
             HashMap<String, String> hashMap = mapper.searchById(id);
             String token = hashMap.hashCode() + "" + address.hashCode();
 
-            if (hashMap.get("password").equals(password)) {
+            if (tabNoteInfiniteEncryption.encryptionPasswordCheckIn(hashMap.get("password"),password)) {
                 LocalDate localDate = LocalDate.now();
                 String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(localDate);
 
@@ -133,8 +141,7 @@ public class AccountService implements AccountServiceInterface {
     public JSONObject setAccountImg(String id, String token,String base64Img){
         JSONObject returnJson = new JSONObject();
         try{
-            String checkId = mapper.tokenCheckIn(token);
-            if ( checkId .equals(id)) {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)) {
                 //删除前缀
                 if (base64Img.startsWith("data:image/jpeg;base64,")) {
                     base64Img = base64Img.substring("data:image/jpeg;base64,".length());
@@ -161,7 +168,9 @@ public class AccountService implements AccountServiceInterface {
         JSONObject jsonObject = new JSONObject();
         try {
 
-            if (id.equals("") || password.equals("") || name.equals("")) {
+            String pwd = tabNoteInfiniteEncryption.decrypt(password);
+
+            if (id.equals("") || pwd.equals("") || name.equals("")) {
                 jsonObject.put("response", "请正确输入");
                 return jsonObject;
             }
@@ -176,13 +185,14 @@ public class AccountService implements AccountServiceInterface {
             }
             LocalDate localDate = LocalDate.now();
             String date = DateTimeFormatter.ofPattern("yyyy-MM-dd").format(localDate);
-            mapper.signUp(id, password, name, date);
+            mapper.signUp(id, pwd, name, date);
 
             HashMap<String, String> hashMap = mapper.searchById(id);
             String token = hashMap.hashCode() + "" + address.hashCode();
             mapper.addToken(token, id, date);
             jsonObject.put("response", "success");
-            jsonObject.put("token", token);
+            Cryptic cryptic = new Cryptic();
+            jsonObject.put("token",cryptic.encrypt(token));
             return jsonObject;
         } catch (Exception e) {
             e.printStackTrace();
@@ -214,7 +224,7 @@ public class AccountService implements AccountServiceInterface {
                 return json;
             }
             //token确认
-            String id = mapper.tokenCheckIn(jsonObject.getString("token"));
+            String id = tabNoteInfiniteEncryption.encryptionTokenGetId(jsonObject.getString("token"));
             if (id==null||id.isEmpty()) {
                 json.put("response", "登录已失效，请重新登录");
                 return json;
@@ -245,7 +255,7 @@ public class AccountService implements AccountServiceInterface {
                 return json;
             }
             //token确认
-            String id = mapper.tokenCheckIn(jsonObject.getString("token"));
+            String id = tabNoteInfiniteEncryption.encryptionTokenGetId(jsonObject.getString("token"));
             if (id==null||id.isEmpty()) {
                 json.put("response", "登录已失效，请重新登录");
                 return json;
@@ -317,8 +327,7 @@ public class AccountService implements AccountServiceInterface {
     public JSONObject getTokensById(String id,String token){
         JSONObject json = new JSONObject();
         try{
-            String checkId = mapper.tokenCheckIn(token);
-            if (checkId == null||checkId.isEmpty()){
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 json.put("response","登录状态确认失败");
                 return json;
             }
