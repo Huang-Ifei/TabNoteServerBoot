@@ -21,6 +21,7 @@ public class PublicKeyController {
 
     @GetMapping("public_key")
     public ResponseEntity<String> publicKey() {
+        System.out.println("publicKey");
         return sendMes(tabNoteInfiniteEncryption.getPublicKey());
     }
 

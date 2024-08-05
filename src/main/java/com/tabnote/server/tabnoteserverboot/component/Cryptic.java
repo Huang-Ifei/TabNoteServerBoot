@@ -15,7 +15,7 @@ public class Cryptic {
             PublicKey publicKey = KeyFactory.getInstance("RSA")
                     .generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(this.publicKey)));
 
-            Cipher encryptCipher = Cipher.getInstance("RSA");
+            Cipher encryptCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             encryptCipher.init(Cipher.ENCRYPT_MODE, publicKey);
             byte[] encryptedBytes = encryptCipher.doFinal(s.getBytes());
             return Base64.getEncoder().encodeToString(encryptedBytes);

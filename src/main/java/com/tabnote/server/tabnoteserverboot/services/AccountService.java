@@ -125,7 +125,8 @@ public class AccountService implements AccountServiceInterface {
 
                 jsonObject.put("response", "success");
                 jsonObject.put("name", hashMap.get("name"));
-                jsonObject.put("token", token);
+                Cryptic cryptic = new Cryptic();
+                jsonObject.put("token", cryptic.encrypt(token));
                 return jsonObject;
             } else {
                 jsonObject.put("response", "账号或密码错误");

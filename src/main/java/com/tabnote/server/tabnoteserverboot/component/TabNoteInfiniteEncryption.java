@@ -61,14 +61,14 @@ public class TabNoteInfiniteEncryption {
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.privateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 stringBytes = cipher.doFinal(Base64.getDecoder().decode(s));
             }catch (BadPaddingException e){
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.lastPrivateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 stringBytes = cipher.doFinal(Base64.getDecoder().decode(s));
             }
@@ -88,14 +88,14 @@ public class TabNoteInfiniteEncryption {
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.privateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 tokenBytes = cipher.doFinal(Base64.getDecoder().decode(encryptionToken));
             }catch (BadPaddingException e){
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.lastPrivateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 tokenBytes = cipher.doFinal(Base64.getDecoder().decode(encryptionToken));
             }
@@ -116,14 +116,14 @@ public class TabNoteInfiniteEncryption {
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.privateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 tokenBytes = cipher.doFinal(Base64.getDecoder().decode(encryptionToken));
             }catch (BadPaddingException e){
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.lastPrivateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 tokenBytes = cipher.doFinal(Base64.getDecoder().decode(encryptionToken));
             }
@@ -147,15 +147,16 @@ public class TabNoteInfiniteEncryption {
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.privateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
                 passwordBytes = cipher.doFinal(Base64.getDecoder().decode(encryptionPassword));
             }catch (BadPaddingException e){
                 PrivateKey privateKey = KeyFactory.getInstance("RSA")
                         .generatePrivate(new PKCS8EncodedKeySpec(Base64.getDecoder().decode(this.lastPrivateKey)));
 
-                Cipher cipher = Cipher.getInstance("RSA");
+                Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
                 cipher.init(Cipher.DECRYPT_MODE, privateKey);
+
                 passwordBytes = cipher.doFinal(Base64.getDecoder().decode(encryptionPassword));
             }
 

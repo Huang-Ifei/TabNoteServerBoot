@@ -13,7 +13,7 @@ public class DefiniteEncryption extends Thread{
         while(true){
             this.tie.newEncryption();
             try {
-                Thread.sleep(30000);
+                Thread.sleep(3000000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
