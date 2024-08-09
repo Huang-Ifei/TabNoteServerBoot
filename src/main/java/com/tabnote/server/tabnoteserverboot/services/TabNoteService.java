@@ -281,6 +281,7 @@ public class TabNoteService implements TabNoteServiceInterface {
 
 
     @Override
+    @Transactional
     public JSONObject searchTabNote(String key, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();

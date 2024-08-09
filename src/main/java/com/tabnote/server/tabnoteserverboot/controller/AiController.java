@@ -231,7 +231,7 @@ public class AiController {
         System.out.println(request.getRemoteAddr() + ":note_sync");
         try {
             JSONObject bodyJson = JSONObject.parseObject(body);
-            return sendMes(aiService.noteAiSync(bodyJson.getString("note_ai_id"),bodyJson.getString("note"),bodyJson.getJSONArray("note_ticks"),bodyJson.getString("token"),bodyJson.getString("id")));
+            return sendMes(aiService.noteAiSync(bodyJson.getString("note_ai_id"),bodyJson.getString("note"),bodyJson.getJSONArray("note_ticks"),bodyJson.getString("token"),bodyJson.getString("id"),bodyJson.getString("note_content")));
         }catch (Exception e){
             e.printStackTrace();
             return sendErr();

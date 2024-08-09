@@ -337,16 +337,16 @@ public class AiService implements AiServiceInterface {
     }
 
     @Override
-    public JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId) {
+    public JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId,String note_content) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usrId, token)) {
                 if (note_ai_id.isEmpty()) {
                     String mainly;
-                    if (note.length() < 20) {
-                        mainly = note;
+                    if (note_content.length() < 20) {
+                        mainly = note_content;
                     } else {
-                        mainly = note.substring(0, 18);
+                        mainly = note_content.substring(0, 18);
                     }
                     String new_note_id = usrId.hashCode() + "" + System.currentTimeMillis();
                     aiMapper.addNewNoteAI(new_note_id, usrId, mainly, note, note_ticks.toString());

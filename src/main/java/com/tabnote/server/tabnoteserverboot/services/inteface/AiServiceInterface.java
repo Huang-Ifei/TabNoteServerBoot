@@ -19,7 +19,7 @@ public interface AiServiceInterface {
 
     JSONObject getAiMessagesList(String usrId, String token);
 
-    JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId);
+    JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId,String note_content);
 
     JSONObject getNoteAiHistory(String usrId, String token);
 
