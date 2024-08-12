@@ -18,10 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.URL;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 
 import static com.tabnote.server.tabnoteserverboot.define.AiList.*;
@@ -54,10 +51,10 @@ public class AiController {
         System.out.println("GetAiList" + request.getRemoteAddr());
         JSONObject jsonObject = new JSONObject();
         jsonObject.putArray("ai_list");
-        for (int i = 0; i < AiList.name.length; i++) {
+        for (int i = 0; i < name.length; i++) {
             JSONObject json = new JSONObject();
             json.put("id", i);
-            json.put("name", AiList.name[i]);
+            json.put("name", name[i]);
             jsonObject.getJSONArray("ai_list").add(json);
         }
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(jsonObject.toString());
@@ -102,11 +99,10 @@ public class AiController {
 
     @PostMapping("note")
     public void getNoteAiRequest(HttpServletRequest request,HttpServletResponse response,@RequestBody String body) throws Exception{
-        System.out.println("note_ai");
+        System.out.println(request.getRemoteAddr()+":note_ai");
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
-            //(bodyJson.getString("id").equals(accountMapper.tokenCheckIn(bodyJson.getString("token")))
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
                 //确定模型
                 String model = aiService.modelDefine(bodyJson);
@@ -147,10 +143,99 @@ public class AiController {
         response.getWriter().close();
     }
 
+    //分布式AI计算信息获取端口
+    @PostMapping("dc")
+    public void getAIDCRequest(HttpServletRequest request,HttpServletResponse response,@RequestBody String body) throws Exception{
+        System.out.println(request.getRemoteAddr()+":AIDC");
+        Socket socket = null;
+        BufferedReader br = null;
+        BufferedOutputStream bos = null;
+        try {
+            response.addHeader("content-type", "text/html;charset=utf-8");
+            //变成JSON对象
+            JSONObject bodyJson = JSONObject.parseObject(body);
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
+                //将请求JSON变为向API发送的JSON
+                JSONArray messages = bodyJson.getJSONArray("messages");
+                String s = JSONObject.parseObject(messages.get(0).toString()).getString("content");
+                s += "(！！！注意！！！如果不是英语问题，请使用中文回答)";
+                StringBuffer sb = new StringBuffer();
+                //抄送给分布式计算中心
+                socket = new Socket("127.0.0.1", 11713);
+                br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                bos = new BufferedOutputStream(socket.getOutputStream());
+                bos.write(s.getBytes());
+                bos.flush();
+                socket.shutdownOutput();
+                JSONObject info = JSONObject.parseObject(br.readLine());
+                response.getWriter().write(info.toString());
+                response.getWriter().write("\n");
+                response.getWriter().flush();
+                String temp;
+                while (null != (temp = br.readLine())) {
+                    JSONObject json = JSONObject.parseObject(temp);
+                    String c = json.getString("response");
+                    //封装
+                    JSONObject returnJSON = new JSONObject();
+                    JSONObject returnMessage = new JSONObject();
+                    returnJSON.put("model", "gemma");
+                    returnMessage.put("content", c);
+                    returnJSON.put("message", returnMessage);
+                    //把封装好的JSON送回
+                    response.getWriter().write(returnJSON.toString());
+                    response.getWriter().write("\n");
+                    response.getWriter().flush();
+                }
+                bos.close();
+                br.close();
+                socket.close();
+
+                response.getWriter().write("");
+                response.getWriter().flush();
+                //如果ai反馈非空且，数据库操作
+                if (!sb.isEmpty()){
+
+                }
+            }else {
+                JSONObject returnJSON = new JSONObject();
+                JSONObject returnMessage = new JSONObject();
+                returnJSON.put("model", "server_security_admin");
+                returnMessage.put("content", "Token check failed，Please login again，token过期请重新登录");
+                returnJSON.put("message", returnMessage);
+                //把封装好的JSON送回
+                response.getWriter().write(returnJSON.toString());
+                response.getWriter().write("\n");
+                response.getWriter().flush();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject returnJSON = new JSONObject();
+            JSONObject returnMessage = new JSONObject();
+
+            returnMessage.put("content","failed");
+            returnJSON.put("message",returnMessage);
+            response.getWriter().write(returnJSON.toString());
+            response.getWriter().write("\n");
+            response.getWriter().flush();
+        } finally {
+            if (bos != null) {
+                bos.close();
+            }
+            if (br != null) {
+                br.close();
+            }
+            if (socket != null) {
+                socket.close();
+            }
+        }
+        response.getWriter().close();
+    }
+
     @PostMapping("messages")
     public void sendMesses(HttpServletRequest request, HttpServletResponse response, @RequestBody String body) throws Exception {
         System.out.println(request.getRemoteAddr() + ":Ai_Messages");
         try {
+            response.addHeader("content-type", "text/html;charset=utf-8");
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
@@ -185,7 +270,7 @@ public class AiController {
                 JSONObject returnJSON = new JSONObject();
                 JSONObject returnMessage = new JSONObject();
                 returnJSON.put("model", "server_security_admin");
-                returnMessage.put("content", "Token check failed，Please login again，token过期请重新登录");
+                returnMessage.put("content", "Token check failed，Please login again");
                 returnJSON.put("message", returnMessage);
                 //把封装好的JSON送回
                 response.getWriter().write(returnJSON.toString());

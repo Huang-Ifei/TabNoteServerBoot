@@ -176,6 +176,7 @@ public class AiService implements AiServiceInterface {
                             JSONObject tempJSON = JSONObject.parseObject(responseJSON.toString());
                             if (tempJSON != null) {
                                 try {
+                                    //找到回报的信息
                                     String returnMess = tempJSON.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text");
                                     //封装
                                     returnJSON.put("model", requestJson.getString("model"));
