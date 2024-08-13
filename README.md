@@ -1,6 +1,10 @@
 # Tab Note后端程序
 
 现在，[开始体验](http://101.42.31.139/) Gemini AI赋能的TabNote综合学习交流平台
+
+[Tab Note分布式AI算力分配中心](https://github.com/Huang-Ifei/AIDistributedCenter)
+
+[TabNote分布式AI计算算力贡献工具箱](https://github.com/Huang-Ifei/AIDistributedProcessKit)
  
 ********************
 
