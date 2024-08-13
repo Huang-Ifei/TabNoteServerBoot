@@ -167,24 +167,28 @@ public class AiController {
                 bos.write(s.getBytes());
                 bos.flush();
                 socket.shutdownOutput();
-                JSONObject info = JSONObject.parseObject(br.readLine());
-                response.getWriter().write(info.toString());
-                response.getWriter().write("\n");
-                response.getWriter().flush();
                 String temp;
                 while (null != (temp = br.readLine())) {
-                    JSONObject json = JSONObject.parseObject(temp);
-                    String c = json.getString("response");
-                    //封装
-                    JSONObject returnJSON = new JSONObject();
-                    JSONObject returnMessage = new JSONObject();
-                    returnJSON.put("model", "gemma");
-                    returnMessage.put("content", c);
-                    returnJSON.put("message", returnMessage);
-                    //把封装好的JSON送回
-                    response.getWriter().write(returnJSON.toString());
-                    response.getWriter().write("\n");
-                    response.getWriter().flush();
+                    //如果是电脑信息
+                    if (temp.startsWith("{\"computerName\":")){
+                        response.getWriter().write(temp);
+                        response.getWriter().write("\n");
+                        response.getWriter().flush();
+                    }else{
+                        //普通ai信息
+                        JSONObject json = JSONObject.parseObject(temp);
+                        String c = json.getString("response");
+                        //封装
+                        JSONObject returnJSON = new JSONObject();
+                        JSONObject returnMessage = new JSONObject();
+                        returnJSON.put("model", "gemma");
+                        returnMessage.put("content", c);
+                        returnJSON.put("message", returnMessage);
+                        //把封装好的JSON送回
+                        response.getWriter().write(returnJSON.toString());
+                        response.getWriter().write("\n");
+                        response.getWriter().flush();
+                    }
                 }
                 bos.close();
                 br.close();
