@@ -1,9 +1,6 @@
 package com.tabnote.server.tabnoteserverboot.mappers;
 
-import com.tabnote.server.tabnoteserverboot.models.AiMessages;
-import com.tabnote.server.tabnoteserverboot.models.AiMessagesForList;
-import com.tabnote.server.tabnoteserverboot.models.NoteAi;
-import com.tabnote.server.tabnoteserverboot.models.NoteAiForList;
+import com.tabnote.server.tabnoteserverboot.models.*;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -29,4 +26,12 @@ public interface AiMapper {
     List<NoteAiForList> getUsrNoteAiList(@Param("usr_id")String usr_id);
     @Select("SELECT  * FROM note_ai WHERE note_ai_id = #{note_ai_id}")
     NoteAi getUsrNoteAi(@Param("note_ai_id")String note_ai_id);
+
+    @Insert("INSERT INTO beat_questions (bq_id, usr_id, date_time, img, text, ai_answer, dxstj) " +
+            "VALUES (#{bq_id}, #{usr_id}, current_timestamp , #{img}, #{text}, #{ai_answer}, #{dxstj})")
+    void insertBQ(BQ beatQuestion);
+    @Select("SELECT bq_id,date_time,img FROM beat_questions WHERE usr_id = #{usrId} ORDER BY date_time DESC")
+    List<BQForList> getBQListByUserId(@Param("usrId") String usrId);
+    @Select("SELECT * FROM beat_questions WHERE bq_id=#{bqId} AND usr_id=#{usrId}")
+    BQ getBQById(@Param("usrId") String usrId,@Param("bqId") String bqId);
 }

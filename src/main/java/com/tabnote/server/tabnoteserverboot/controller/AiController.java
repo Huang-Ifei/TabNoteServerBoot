@@ -6,6 +6,7 @@ import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.define.AiList;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
+import com.tabnote.server.tabnoteserverboot.models.BQ;
 import com.tabnote.server.tabnoteserverboot.services.AiService;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,8 @@ import org.springframework.web.client.RestTemplate;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 import static com.tabnote.server.tabnoteserverboot.define.AiList.*;
 
@@ -104,20 +107,19 @@ public class AiController {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
+
                 //确定模型
-                String model = aiService.modelDefine(bodyJson);
+                String model = bodyJson.getString("model");
                 //将请求JSON变为向API发送的JSON
                 JSONArray messages = bodyJson.getJSONArray("messages");
-                JSONObject requestJson = aiService.buildRequestJSON(messages,model);
+                JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,model);
                 StringBuffer sb = new StringBuffer();
                 //抄送给API
-                aiService.postAiMessagesToAPI(requestJson,response,sb);
+                aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
+                System.out.println(sb);
                 response.getWriter().write("");
                 response.getWriter().flush();
-                //如果ai反馈非空且，数据库操作
-                if (!sb.isEmpty()){
 
-                }
             }else {
                 JSONObject returnJSON = new JSONObject();
                 JSONObject returnMessage = new JSONObject();
@@ -235,6 +237,69 @@ public class AiController {
         response.getWriter().close();
     }
 
+    @PostMapping("gpt")
+    public void sendChatGPTMesses(HttpServletRequest request, HttpServletResponse response, @RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":gpt");
+        try {
+            response.addHeader("content-type", "text/html;charset=utf-8");
+            //变成JSON对象
+            JSONObject bodyJson = JSONObject.parseObject(body);
+            //需要变更为确定是否剩余 至少100的 会员额度
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
+                //确定模型
+                String model = bodyJson.getString("model");
+                //将请求JSON变为向API发送的JSON
+                JSONArray messages = bodyJson.getJSONArray("messages");
+                JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,model);
+                StringBuffer sb = new StringBuffer();
+                //抄送给API
+                aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
+                System.out.println(sb);
+                response.getWriter().write("");
+                response.getWriter().flush();
+                //如果ai反馈非空且，数据库操作
+                /*
+                if (!sb.isEmpty()){
+                    if (messages.size() == 1 && bodyJson.containsKey("id") && (bodyJson.containsKey("ai_ms_id")&&bodyJson.getString("ai_ms_id").isEmpty())) {
+                        JSONObject messageJson = new JSONObject();
+                        messageJson.put("role","model");
+                        messageJson.put("content",sb.toString());
+                        messages.add(messageJson);
+                        response.getWriter().write(aiService.createMessages(messages,bodyJson.getString("id"),request.getRemoteAddr()+request.getRemotePort()));
+                        response.getWriter().flush();
+                    } else if (messages.size() > 1 || (bodyJson.containsKey("ai_ms_id")&&!bodyJson.getString("ai_ms_id").isEmpty()) ){
+                        JSONObject messageJson = new JSONObject();
+                        messageJson.put("role","model");
+                        messageJson.put("content",sb.toString());
+                        messages.add(messageJson);
+                        aiService.changeMessages(messages,bodyJson.getString("ai_ms_id"));
+                    }
+                }*/
+            }else {
+                JSONObject returnJSON = new JSONObject();
+                JSONObject returnMessage = new JSONObject();
+                returnJSON.put("model", "server_security_admin");
+                returnMessage.put("content", "Token check failed，Please login again");
+                returnJSON.put("message", returnMessage);
+                //把封装好的JSON送回
+                response.getWriter().write(returnJSON.toString());
+                response.getWriter().write("\n");
+                response.getWriter().flush();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject returnJSON = new JSONObject();
+            JSONObject returnMessage = new JSONObject();
+
+            returnMessage.put("content","failed");
+            returnJSON.put("message",returnMessage);
+            response.getWriter().write(returnJSON.toString());
+            response.getWriter().write("\n");
+            response.getWriter().flush();
+        }
+        response.getWriter().close();
+    }
+
     @PostMapping("messages")
     public void sendMesses(HttpServletRequest request, HttpServletResponse response, @RequestBody String body) throws Exception {
         System.out.println(request.getRemoteAddr() + ":Ai_Messages");
@@ -243,16 +308,19 @@ public class AiController {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
+
                 //确定模型
-                String model = aiService.modelDefine(bodyJson);
+                String model = bodyJson.getString("model");
                 //将请求JSON变为向API发送的JSON
                 JSONArray messages = bodyJson.getJSONArray("messages");
-                JSONObject requestJson = aiService.buildRequestJSON(messages,model);
+                JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,model);
                 StringBuffer sb = new StringBuffer();
                 //抄送给API
-                aiService.postAiMessagesToAPI(requestJson,response,sb);
+                aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
+                System.out.println(sb);
                 response.getWriter().write("");
                 response.getWriter().flush();
+
                 //如果ai反馈非空且，数据库操作
                 if (!sb.isEmpty()){
                     if (messages.size() == 1 && bodyJson.containsKey("id") && (bodyJson.containsKey("ai_ms_id")&&bodyJson.getString("ai_ms_id").isEmpty())) {
@@ -294,6 +362,20 @@ public class AiController {
         }
         response.getWriter().close();
     }
+
+    @PostMapping("dxstj")
+    public ResponseEntity<String> getDXSTJ(HttpServletRequest request,@RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":dxstj");
+        JSONObject requestJson = JSONObject.parseObject(body);
+
+        String id = requestJson.getString("id");
+        String token = requestJson.getString("token");
+        String base64Img = requestJson.getString("img");
+
+        return sendMes(aiService.getDXSTJ(id,token,base64Img));
+    }
+
+
 
     @PostMapping("get_history")
     public ResponseEntity<String> getAiHistory(HttpServletRequest request,@RequestBody String body) throws Exception {
@@ -345,6 +427,56 @@ public class AiController {
         String note_ai_id = requestJson.getString("note_ai_id");
         String token = requestJson.getString("token");
         return sendMes(aiService.getHistoryNoteAi(note_ai_id,token));
+    }
+
+    @PostMapping("insertBQ")
+    public ResponseEntity<String> insertBQ(HttpServletRequest request,@RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":insertBQ");
+        try{
+            JSONObject requestJson = JSONObject.parseObject(body);
+            String id = requestJson.getString("usr_id");
+            String token = requestJson.getString("token");
+            BQ bq = new BQ();
+            bq.setUsr_id(id);
+            bq.setText(requestJson.getString("text"));
+            bq.setAi_answer(requestJson.getString("ai_answer"));
+            bq.setDxstj(requestJson.getJSONArray("dxstj").toString());
+            bq.setImg(requestJson.getString("img"));
+            bq.setBq_id(UUID.randomUUID().toString());
+            return sendMes(aiService.insertBQ(bq,id,token));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
+    @PostMapping("BQList")
+    public ResponseEntity<String> getBQList(HttpServletRequest request,@RequestBody String body) throws Exception {
+        try{
+            System.out.println(request.getRemoteAddr() + ":BQList");
+            JSONObject requestJson = JSONObject.parseObject(body);
+            String id = requestJson.getString("id");
+            String token = requestJson.getString("token");
+            return sendMes(aiService.getBQListByUserId(id,token));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
+    @PostMapping("BQ")
+    public ResponseEntity<String> getBQ(HttpServletRequest request,@RequestBody String body) throws Exception {
+        System.out.println(request.getRemoteAddr() + ":BQ");
+        try{
+            JSONObject requestJson = JSONObject.parseObject(body);
+            String id = requestJson.getString("id");
+            String token = requestJson.getString("token");
+            String bq_id = requestJson.getString("bq_id");
+            return sendMes(aiService.getBQ(bq_id,id,token));
+        }catch (Exception e){
+            e.printStackTrace();
+            return sendErr();
+        }
     }
 
     private ResponseEntity<String> sendErr() {

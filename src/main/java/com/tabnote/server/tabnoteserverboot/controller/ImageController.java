@@ -39,6 +39,32 @@ public class ImageController {
         this.fileService = fileService;
     }
 
+    @GetMapping("/tabNoteImg")
+    public ResponseEntity<byte[]> getTabNoteImg(@RequestParam String name) throws Exception {
+        System.out.println("tabNoteImg");
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(Path.of("tabNoteImgs/" + name + ".jpg"));
+            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
+        } catch (Exception e) {
+            bytes = new byte[0];
+            e.printStackTrace();
+        }
+        return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
+    }
+
+    @PostMapping("/insertTabNoteImg")
+    public ResponseEntity<String> insertTabNoteImg(@RequestBody String body) throws Exception {
+        System.out.println("insert tabNoteImg");
+        try {
+            JSONObject json = JSONObject.parseObject(body);
+            return ResponseEntity.ok().body(fileService.insertImgWithOutIdCheck(json.getString("img")));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok().body("failed");
+        }
+    }
+
     @PostMapping("/upload_tab_note_img")
     public ResponseEntity<String> uploadImg(HttpServletRequest request) {
         System.out.println("upload_tb_img");
@@ -75,19 +101,6 @@ public class ImageController {
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
     }
 
-    @GetMapping("/tabNoteImg")
-    public ResponseEntity<byte[]> getTabNoteImg(@RequestParam String name) throws Exception {
-        System.out.println("tabNoteImg");
-        byte[] bytes;
-        try {
-            bytes = Files.readAllBytes(Path.of("tabNoteImgs/" + name + ".jpg"));
-            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
-        } catch (Exception e) {
-            bytes = new byte[0];
-            e.printStackTrace();
-        }
-        return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
-    }
     @GetMapping("/accountImg")
     public ResponseEntity<byte[]> getAccountImg(@RequestParam String id)  throws Exception {
         byte[] bytes;

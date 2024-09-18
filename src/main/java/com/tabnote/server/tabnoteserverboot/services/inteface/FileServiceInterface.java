@@ -9,5 +9,5 @@ public interface FileServiceInterface {
 
     int insertFileWithOutIdCheck(String base64FileString);
 
-    int insertImgWithOutIdCheck(String base64FileString);
+    String insertImgWithOutIdCheck(String base64FileString);
 }

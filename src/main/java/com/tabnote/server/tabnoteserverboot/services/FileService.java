@@ -76,12 +76,29 @@ public class FileService implements FileServiceInterface {
     }
 
     @Override
-    public int insertImgWithOutIdCheck(String base64FileString) {
-        int name = base64FileString.hashCode();
+    public String insertImgWithOutIdCheck(String base64FileString) {
+        String name = String.valueOf(base64FileString.hashCode());
+
         if (base64FileString.startsWith("data:image/jpeg;base64,")) {
             base64FileString = base64FileString.substring("data:image/jpeg;base64,".length());
         }
         byte[] bytes = Base64.getDecoder().decode(base64FileString);
+
+        try{
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            //取SHA-256加密的前11位为名字
+            byte[] hash = digest.digest(bytes);
+            name = Base64.getEncoder().encodeToString(hash).substring(0,21);
+            name = name.replace('/','-');
+            name = name.replace('+','-');
+            name = name.replace('?','-');
+            name = name.replace('=','-');
+            name = name.replace('&','-');
+            System.out.println(name+"::"+Base64.getEncoder().encodeToString(hash));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
         File file = new File("tabNoteImgs/" + name + ".jpg");
         if (file.exists()) {
             return name;
