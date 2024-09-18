@@ -2,7 +2,7 @@
 
 现在，[开始体验](http://101.42.31.139/) ChatGPT AI赋能的TabNote综合学习交流平台
 
-在我们通过ICP备案后，您也可以通过[tabnote.cn](tabnote.cn)进行访问
+在我们通过ICP备案后，您也可以通过[tabnote.cn](http://tabnote.cn)进行访问
 
 [Tab Note分布式AI算力分配中心](https://github.com/Huang-Ifei/AIDistributedCenter)
 
