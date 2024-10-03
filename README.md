@@ -1,13 +1,7 @@
 # Tab Note后端程序
 
-现在，[开始体验](http://101.42.31.139/) ChatGPT AI赋能的TabNote综合学习交流平台
+现在，[开始体验](http://tabnote.cn/) ChatGPT AI赋能的TabNote综合学习交流平台
 
-在我们通过ICP备案后，您也可以通过[tabnote.cn](http://tabnote.cn)进行访问
-
-[Tab Note分布式AI算力分配中心](https://github.com/Huang-Ifei/AIDistributedCenter)
-
-[TabNote分布式AI计算算力贡献工具箱](https://github.com/Huang-Ifei/AIDistributedProcessKit)
- 
 ********************
 
 ### 最新推出的AI搜题
@@ -22,5 +16,3 @@ ChatGPT赋能，为TabNote AI大脑，全面加持。
 账户隐私信息使用动态订阅的公钥进行非对称加密🔐。
 ### 开放的交流平台。
 每个人都能发表自己的笔记并给任意笔记留言，参与讨论。
-### 永久免费的分布式AI，所有算力来自社区贡献
-Google最新的开源大模型Gemma2系列加持，所有算力均来自于资源贡献。
