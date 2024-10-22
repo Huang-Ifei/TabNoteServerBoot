@@ -6,6 +6,7 @@ import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.define.AiList;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
+import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.BQ;
 import com.tabnote.server.tabnoteserverboot.services.AiService;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
@@ -47,6 +48,12 @@ public class AiController {
     @Autowired
     public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tabNoteInfiniteEncryption) {
         this.tabNoteInfiniteEncryption = tabNoteInfiniteEncryption;
+    }
+
+    VipMapper vipMapper;
+    @Autowired
+    public void setVipMapper(VipMapper vipMapper) {
+        this.vipMapper = vipMapper;
     }
 
     @GetMapping("list")
@@ -107,7 +114,19 @@ public class AiController {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
-
+                //没有授权的拒绝执行
+                if (vipMapper.selectRankByUserId(bodyJson.getString("id"))<=0){
+                    JSONObject returnJSON = new JSONObject();
+                    JSONObject returnMessage = new JSONObject();
+                    returnJSON.put("model", "server_security_admin");
+                    returnMessage.put("content", "You need get AFA to request, please open: https://tabnote.cn/afa to get it");
+                    returnJSON.put("message", returnMessage);
+                    //把封装好的JSON送回
+                    response.getWriter().write(returnJSON.toString());
+                    response.getWriter().write("\n");
+                    response.getWriter().flush();
+                    return;
+                }
                 //确定模型
                 String model = bodyJson.getString("model");
                 //将请求JSON变为向API发送的JSON
@@ -115,11 +134,12 @@ public class AiController {
                 JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,model);
                 StringBuffer sb = new StringBuffer();
                 //抄送给API
-                aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
+                int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
                 System.out.println(sb);
                 response.getWriter().write("");
                 response.getWriter().flush();
 
+                vipMapper.useQuota(quotaCost,bodyJson.getString("id"));
             }else {
                 JSONObject returnJSON = new JSONObject();
                 JSONObject returnMessage = new JSONObject();
@@ -244,8 +264,20 @@ public class AiController {
             response.addHeader("content-type", "text/html;charset=utf-8");
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
-            //需要变更为确定是否剩余 至少100的 会员额度
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
+                //没有授权的拒绝执行
+                if (vipMapper.selectRankByUserId(bodyJson.getString("id"))<=0){
+                    JSONObject returnJSON = new JSONObject();
+                    JSONObject returnMessage = new JSONObject();
+                    returnJSON.put("model", "server_security_admin");
+                    returnMessage.put("content", "You need get AFA to request, please open: https://tabnote.cn/afa to get it");
+                    returnJSON.put("message", returnMessage);
+                    //把封装好的JSON送回
+                    response.getWriter().write(returnJSON.toString());
+                    response.getWriter().write("\n");
+                    response.getWriter().flush();
+                    return;
+                }
                 //确定模型
                 String model = bodyJson.getString("model");
                 //将请求JSON变为向API发送的JSON
@@ -253,7 +285,7 @@ public class AiController {
                 JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,model);
                 StringBuffer sb = new StringBuffer();
                 //抄送给API
-                aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
+                int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
                 System.out.println(sb);
                 response.getWriter().write("");
                 response.getWriter().flush();
@@ -275,6 +307,7 @@ public class AiController {
                         aiService.changeMessages(messages,bodyJson.getString("ai_ms_id"));
                     }
                 }*/
+                vipMapper.useQuota(quotaCost,bodyJson.getString("id"));
             }else {
                 JSONObject returnJSON = new JSONObject();
                 JSONObject returnMessage = new JSONObject();
@@ -308,7 +341,20 @@ public class AiController {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject(body);
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"),bodyJson.getString("token"))) {
-
+                //没有授权的拒绝执行
+                Object o = vipMapper.selectRankByUserId(bodyJson.getString("id"));
+                if (o==null||(int)o <=0){
+                    JSONObject returnJSON = new JSONObject();
+                    JSONObject returnMessage = new JSONObject();
+                    returnJSON.put("model", "server_security_admin");
+                    returnMessage.put("content", "你需要获取高级功能授权以使用高级功能，请访问：https://tabnote.cn/afa 获取授权，You need get AFA to request, please open: https://tabnote.cn/afa to get it.");
+                    returnJSON.put("message", returnMessage);
+                    //把封装好的JSON送回
+                    response.getWriter().write(returnJSON.toString());
+                    response.getWriter().write("\n");
+                    response.getWriter().flush();
+                    return;
+                }
                 //确定模型
                 String model = bodyJson.getString("model");
                 //将请求JSON变为向API发送的JSON
@@ -316,23 +362,25 @@ public class AiController {
                 JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,model);
                 StringBuffer sb = new StringBuffer();
                 //抄送给API
-                aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
+                int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson,response,sb);
                 System.out.println(sb);
                 response.getWriter().write("");
                 response.getWriter().flush();
+
+                vipMapper.useQuota(quotaCost,bodyJson.getString("id"));
 
                 //如果ai反馈非空且，数据库操作
                 if (!sb.isEmpty()){
                     if (messages.size() == 1 && bodyJson.containsKey("id") && (bodyJson.containsKey("ai_ms_id")&&bodyJson.getString("ai_ms_id").isEmpty())) {
                         JSONObject messageJson = new JSONObject();
-                        messageJson.put("role","model");
+                        messageJson.put("role","assistant");
                         messageJson.put("content",sb.toString());
                         messages.add(messageJson);
                         response.getWriter().write(aiService.createMessages(messages,bodyJson.getString("id"),request.getRemoteAddr()+request.getRemotePort()));
                         response.getWriter().flush();
                     } else if (messages.size() > 1 || (bodyJson.containsKey("ai_ms_id")&&!bodyJson.getString("ai_ms_id").isEmpty()) ){
                         JSONObject messageJson = new JSONObject();
-                        messageJson.put("role","model");
+                        messageJson.put("role","assistant");
                         messageJson.put("content",sb.toString());
                         messages.add(messageJson);
                         aiService.changeMessages(messages,bodyJson.getString("ai_ms_id"));

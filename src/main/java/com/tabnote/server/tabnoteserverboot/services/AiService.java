@@ -1,11 +1,11 @@
 package com.tabnote.server.tabnoteserverboot.services;
 
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
+import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.*;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletResponse;
@@ -34,6 +34,12 @@ public class AiService implements AiServiceInterface {
     AiMapper aiMapper;
     AiRequestCounter aiRequestCounter;
     AccountMapper accountMapper;
+    VipMapper vipMapper;
+
+    @Autowired
+    public void setVipMapper(VipMapper vipMapper) {
+        this.vipMapper = vipMapper;
+    }
 
     @Autowired
     public void setAiMapper(AiMapper aiMapper) {
@@ -254,7 +260,12 @@ public class AiService implements AiServiceInterface {
     @Override
     public JSONObject buildChatGPTRequestJSON(JSONArray messages, String model) {
         JSONObject requestJson = new JSONObject();
-        requestJson.put("model", model);
+        if (model.equals("gpt-4o")||model.equals("gpt-4o-2024-08-06")){
+            requestJson.put("model", modelList[0]);
+        }else if (model.equals("gpt-4o-mini")){
+            requestJson.put("model", modelList[1]);
+        }
+
         requestJson.put("stream",true);
         JSONObject usageUpJson = new JSONObject();
         usageUpJson.put("include_usage", true);
@@ -281,7 +292,7 @@ public class AiService implements AiServiceInterface {
 
     //抄送给ChatGPT API
     @Override
-    public void postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
+    public int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
         URL uRL = new URL(url);
         HttpURLConnection connection;
@@ -306,7 +317,7 @@ public class AiService implements AiServiceInterface {
 
             is = connection.getInputStream();
             if (null != is) {
-                Integer totalTokenCount = 0;
+                int quotaCost = 0;
                 br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                 String temp;
                 while (null != (temp = br.readLine())) {
@@ -326,14 +337,9 @@ public class AiService implements AiServiceInterface {
                         if (tempJSON != null) {
                             try {
                                 JSONArray choices = tempJSON.getJSONArray("choices");
+                                //如果choices是空的，那么这就是最后一个计数条计算quota
                                 if (choices.isEmpty()){
-                                    if (tempJSON.containsKey("usage")&&tempJSON.get("usage")!=null) {
-                                        if (requestJson.getString("model").equals("gpt-4o-mini")){
-                                            totalTokenCount = tempJSON.getJSONObject("usage").getInteger("total_tokens");
-                                        }else{
-                                            totalTokenCount = tempJSON.getJSONObject("usage").getInteger("total_tokens")*40;
-                                        }
-                                    }
+                                    quotaCost = countQuota(tempJSON,requestJson);
                                 }else{
                                     //找到回报的信息
                                     String returnMess = choices.getJSONObject(0).getJSONObject("delta").getString("content");
@@ -344,14 +350,8 @@ public class AiService implements AiServiceInterface {
                                         returnJSON.put("message", returnMessage);
                                         //添加到string buffer里面
                                         returnString.append(returnMess);
-                                        if (tempJSON.containsKey("usage")&&tempJSON.get("usage")!=null) {
-                                            if (requestJson.getString("model").equals("gpt-4o-mini")){
-                                                totalTokenCount = tempJSON.getJSONObject("usage").getInteger("total_tokens");
-                                            }else{
-                                                totalTokenCount = tempJSON.getJSONObject("usage").getInteger("total_tokens")*40;
-                                            }
-
-                                        }
+                                        //如果usage不等于null就可以计算quota了
+                                        quotaCost = countQuota(tempJSON,requestJson);
                                         //把封装好的JSON送回
                                         response.getWriter().write(returnJSON.toString());
                                         response.getWriter().write("\n");
@@ -370,6 +370,7 @@ public class AiService implements AiServiceInterface {
                 response.getWriter().write("\n");
                 response.getWriter().flush();
                 br.close();
+                return quotaCost;
             }
         } else {
             returnString.delete(0, returnString.length());
@@ -388,6 +389,19 @@ public class AiService implements AiServiceInterface {
             response.getWriter().write("\n");
             response.getWriter().flush();
         }
+        return 0;
+    }
+
+    public int countQuota(JSONObject tempJSON,JSONObject requestJson){
+        int quotaCost = 0;
+        if (tempJSON.containsKey("usage")&&tempJSON.get("usage")!=null) {
+            if (requestJson.getString("model").equals(modelList[0])){
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens")*18+tempJSON.getJSONObject("usage").getInteger("completion_tokens")*70;
+            }else if (requestJson.getString("model").equals(modelList[1])){
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens")+tempJSON.getJSONObject("usage").getInteger("completion_tokens")*4;
+            }
+        }
+        return quotaCost;
     }
 
     //创建新的对话，返回一个ai ms id

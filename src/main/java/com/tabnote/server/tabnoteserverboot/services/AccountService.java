@@ -8,6 +8,7 @@ import com.tabnote.server.tabnoteserverboot.mappers.ResetIdMapper;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AccountServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -245,6 +246,8 @@ public class AccountService implements AccountServiceInterface {
         }
         return json;
     }
+
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public JSONObject resetID(JSONObject jsonObject) {
 
@@ -264,7 +267,7 @@ public class AccountService implements AccountServiceInterface {
             //重新设置id并更改token对应的id
             HashMap<String, String> idCheck = mapper.searchById(jsonObject.getString("id"));
             if (idCheck == null) {
-                mapper.resetID(id, new_id);
+                resetIdMapper.resetID(id,new_id);
                 resetIdMapper.updateToken(new_id,jsonObject.getString("token"));
                 resetIdMapper.updateAiMId(id,new_id);
                 resetIdMapper.updateHisNoteId(id,new_id);
@@ -273,11 +276,13 @@ public class AccountService implements AccountServiceInterface {
                 resetIdMapper.updateMessMessId(id,new_id);
                 resetIdMapper.updateTabNoteId(id,new_id);
                 resetIdMapper.updatePlan(id,new_id);
-                resetIdMapper.updateClickNote(id,new_id);
+                resetIdMapper.updateClickNoteId(id,new_id);
                 resetIdMapper.updateLikeNote(id,new_id);
                 resetIdMapper.updateTabMess(id,new_id);
                 resetIdMapper.updateMessMess(id,new_id);
                 resetIdMapper.updateNoteAi(id,new_id);
+                resetIdMapper.updateBQId(id,new_id);
+                resetIdMapper.updateVIPId(id,new_id);
 
                 File accountImg = new File("accountImg/"+id+".jpg");
                 if (accountImg.exists()){
@@ -295,6 +300,7 @@ public class AccountService implements AccountServiceInterface {
         }
         return json;
     }
+
     @Override
     public JSONObject resetPassword(JSONObject jsonObject) {
 

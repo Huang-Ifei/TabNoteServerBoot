@@ -6,6 +6,7 @@ import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
+import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.TabNote;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
 import com.tabnote.server.tabnoteserverboot.redis.LikeCount;
@@ -27,6 +28,12 @@ public class TabNoteService implements TabNoteServiceInterface {
     AccountMapper accountMapper;
     FileService fileService;
     LikeCount likeCount;
+    VipMapper vipMapper;
+
+    @Autowired
+    public void setVipMapper(VipMapper vipMapper) {
+        this.vipMapper = vipMapper;
+    }
 
     @Autowired
     public void setTabNoteMapper(TabNoteMapper tabNoteMapper) {
@@ -54,6 +61,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+
     @Autowired
     public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
         this.tabNoteInfiniteEncryption = tie;
@@ -145,8 +153,8 @@ public class TabNoteService implements TabNoteServiceInterface {
     public JSONObject likeTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
         try {
-            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)) {
-                likeCount.likeTabNote(tabNoteId,id);
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id, token)) {
+                likeCount.likeTabNote(tabNoteId, id);
             } else {
                 returnJSON.put("response", "token_check_failed");
             }
@@ -159,23 +167,23 @@ public class TabNoteService implements TabNoteServiceInterface {
         return returnJSON;
     }
 
-    @Transactional(rollbackFor = Exception.class,noRollbackFor = {NullPointerException.class})
+    @Transactional(rollbackFor = Exception.class, noRollbackFor = {NullPointerException.class})
     @Override
     public JSONObject getTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
 
         try {
 
-            if (!id.isEmpty() && !token.isEmpty() && tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)) {
-                returnJSON.put("is_liked",tabNoteMapper.isLiked(tabNoteId, id));
-                try{
+            if (!id.isEmpty() && !token.isEmpty() && tabNoteInfiniteEncryption.encryptionTokenCheckIn(id, token)) {
+                returnJSON.put("is_liked", tabNoteMapper.isLiked(tabNoteId, id));
+                try {
                     tabNoteMapper.clickNote(tabNoteId, id);
                     tabNoteMapper.clickThis(tabNoteId);
-                }catch (Exception e){
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }else{
-                returnJSON.put("is_liked",0);
+            } else {
+                returnJSON.put("is_liked", 0);
             }
             TabNote tabNote = tabNoteMapper.getTabNoteById(tabNoteId);
             returnJSON.put("usr_id", tabNote.getUsr_id());
@@ -194,8 +202,8 @@ public class TabNoteService implements TabNoteServiceInterface {
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
             returnJSON.put("response", "failed");
+            throw e;
         }
 
         return returnJSON;
@@ -205,39 +213,43 @@ public class TabNoteService implements TabNoteServiceInterface {
     public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs, int display) {
         JSONObject returnJSON = new JSONObject();
         try {
-            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id,token)) {
-                String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id, token)) {
+                if (vipMapper.selectRankByUserId(usr_id) >= 6) {
+                    String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 
-                if (base64FileString.isEmpty() && imgs.isEmpty()) {
-                    tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, display);
-                    returnJSON.put("response", "success");
-                } else {
-                    String fileName = "";
-                    JSONObject imgJson = new JSONObject();
-                    imgJson.putArray("images");
+                    if (base64FileString.isEmpty() && imgs.isEmpty()) {
+                        tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, display);
+                        returnJSON.put("response", "success");
+                    } else {
+                        String fileName = "";
+                        JSONObject imgJson = new JSONObject();
+                        imgJson.putArray("images");
 
-                    try {
-                        if (!imgs.isEmpty()) {
-                            for (int i = 0; i < imgs.size(); i++) {
-                                imgJson.getJSONArray("images").add(fileService.insertImgWithOutIdCheck(imgs.getString(i)));
+                        try {
+                            if (!imgs.isEmpty()) {
+                                for (int i = 0; i < imgs.size(); i++) {
+                                    imgJson.getJSONArray("images").add(fileService.insertImgWithOutIdCheck(imgs.getString(i)));
+                                }
                             }
+                        } catch (Exception e) {
+                            returnJSON.put("response", "img_insert_failed");
+                            return returnJSON;
                         }
-                    } catch (Exception e) {
-                        returnJSON.put("response", "img_insert_failed");
-                        return returnJSON;
-                    }
 
-                    try {
-                        if (!base64FileString.isEmpty()) {
-                            fileName = String.valueOf(fileService.insertFileWithOutIdCheck(base64FileString));
+                        try {
+                            if (!base64FileString.isEmpty()) {
+                                fileName = String.valueOf(fileService.insertFileWithOutIdCheck(base64FileString));
+                            }
+                        } catch (Exception e) {
+                            returnJSON.put("response", "img_insert_failed");
+                            return returnJSON;
                         }
-                    } catch (Exception e) {
-                        returnJSON.put("response", "img_insert_failed");
-                        return returnJSON;
+                        tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, fileName, imgJson.toString(), display);
+                        returnJSON.put("response", "success");
                     }
-                    tabNoteMapper.insertTabNoteWithFile(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, fileName, imgJson.toString(), display);
-                    returnJSON.put("response", "success");
+                } else {
+                    returnJSON.put("response", "No AFA++");
                 }
             } else {
                 returnJSON.put("response", "token_check_failed");

@@ -16,7 +16,7 @@ public interface AiServiceInterface {
     JSONObject buildChatGPTRequestJSON(JSONArray messages, String model);
 
     //抄送给API
-    void postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
+    int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
 
     String createMessages(JSONArray messages, String id, String ip);
 
