@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class XianService {
-    @Scheduled(cron = "* * * * * *")
+    @Scheduled(cron = "1 1 1 * * *")
     public void scheduledTask() {
         System.out.println("scheduledTask");
     }

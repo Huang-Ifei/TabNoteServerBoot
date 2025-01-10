@@ -36,10 +36,10 @@ public class VipController {
     }
 
     @GetMapping("rank")
-    public ResponseEntity<String> publicKey(@RequestParam String id) throws Exception {
+    public ResponseEntity<String> publicKey(@RequestParam String id) {
         System.out.println("getVIP");
         JSONObject json = new JSONObject();
-        Integer getRank = vipMapper.selectRankByUserId(id);
+        Integer getRank = vipMapper.selectRankByUserId(id).getRank();
         if (getRank == null) {
             json.put("rank", 0);
         } else {

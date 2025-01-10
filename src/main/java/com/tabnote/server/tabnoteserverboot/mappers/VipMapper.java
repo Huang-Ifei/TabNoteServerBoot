@@ -1,5 +1,6 @@
 package com.tabnote.server.tabnoteserverboot.mappers;
 
+import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
 import com.tabnote.server.tabnoteserverboot.models.Vip;
 import org.apache.ibatis.annotations.*;
 
@@ -8,8 +9,8 @@ import java.util.List;
 @Mapper
 public interface VipMapper {
 
-    @Select("select `rank` from vip where start_time<=NOW() and end_time>NOW() and usr_id=#{id}")
-    Integer selectRankByUserId(@Param("id")String id);
+    @Select("select `rank`,`quota` from vip where start_time<=NOW() and end_time>NOW() and usr_id=#{id}")
+    RankAndQuota selectRankByUserId(@Param("id")String id);
 
     @Select("select vip_id,start_time,end_time,quota,`rank` from vip where usr_id=#{id} and end_time>NOW() order by `end_time`")
     List<Vip> selectVipListById(@Param("id")String id);

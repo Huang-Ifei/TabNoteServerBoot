@@ -7,6 +7,7 @@ import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
+import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
 import com.tabnote.server.tabnoteserverboot.models.TabNote;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
 import com.tabnote.server.tabnoteserverboot.redis.LikeCount;
@@ -214,7 +215,8 @@ public class TabNoteService implements TabNoteServiceInterface {
         JSONObject returnJSON = new JSONObject();
         try {
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id, token)) {
-                if (vipMapper.selectRankByUserId(usr_id) >= 6) {
+                RankAndQuota rankAndQuota = vipMapper.selectRankByUserId(usr_id);
+                if (rankAndQuota==null||rankAndQuota.passAFAPP()) {
                     String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 
@@ -222,6 +224,7 @@ public class TabNoteService implements TabNoteServiceInterface {
                         tabNoteMapper.insertTabNote(tab_note_id, usr_id, ip_address, class_name, tab_note_name, tags, tab_note, date_time, display);
                         returnJSON.put("response", "success");
                     } else {
+                        //兼容旧版
                         String fileName = "";
                         JSONObject imgJson = new JSONObject();
                         imgJson.putArray("images");

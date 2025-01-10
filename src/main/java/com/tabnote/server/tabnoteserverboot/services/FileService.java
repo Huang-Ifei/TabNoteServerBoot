@@ -42,7 +42,7 @@ public class FileService implements FileServiceInterface {
             }
             res.put("errno",0);
             JSONObject data = new JSONObject();
-            data.put("url","http://101.42.31.139:7845/tabNoteImg?name="+name);
+            data.put("url","/api/tabNoteImg?name="+name);
             res.put("data",data);
         } catch (Exception e) {
             res.put("errno",1);

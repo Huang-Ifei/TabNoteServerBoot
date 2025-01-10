@@ -5,6 +5,8 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.models.BQ;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
+
 public interface AiServiceInterface {
     String modelDefine(JSONObject bodyJson);
 
@@ -34,9 +36,15 @@ public interface AiServiceInterface {
 
     JSONObject getDXSTJ(String id, String token, String base64Img);
 
+    JSONObject insertBQWithOutTokenCheck(BQ beatQuestion);
+
     JSONObject insertBQ(BQ beatQuestion, String usrId, String token);
 
-    JSONObject getBQListByUserId(String usrId, String token);
+    JSONObject getBQListByUserId(String usrId, String token,int index);
 
     JSONObject getBQ(String bqId, String usrId, String token);
+
+    void returnAdminMess(HttpServletResponse response,String s)throws IOException;
+
+    void returnErrMess(HttpServletResponse response, String e)throws Exception;
 }

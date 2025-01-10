@@ -76,7 +76,7 @@ public class ImageController {
 
             MultipartFile file = multipartRequest.getFile(multipartRequest.getFileNames().next());
 
-            if(file.getSize()>1048576){
+            if(file.getSize()>5000000){
                 return sendErr();
             }
             return sendMes(fileService.saveImg(file));
