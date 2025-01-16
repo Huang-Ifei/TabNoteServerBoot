@@ -8,6 +8,7 @@ import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.BQ;
 import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.services.AiService;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
@@ -64,6 +65,13 @@ public class AiController {
         this.securityComponent = securityComponent;
     }
 
+    QuotaDeductionPublisher quotaDeductionPublisher;
+
+    @Autowired
+    public void setQuotaDeductionPublisher(QuotaDeductionPublisher quotaDeductionPublisher) {
+        this.quotaDeductionPublisher = quotaDeductionPublisher;
+    }
+
     //笔记型AI的接口
     @PostMapping("note")
     public void getNoteAiRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -83,7 +91,7 @@ public class AiController {
             response.getWriter().write("");
             response.getWriter().flush();
 
-            vipMapper.useQuota(quotaCost, bodyJson.getString("id"));
+            quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
         } catch (Exception e) {
             e.printStackTrace();
             String errMess = e.toString();
@@ -110,7 +118,8 @@ public class AiController {
             System.out.println(sb);
             response.getWriter().write("");
             response.getWriter().flush();
-            vipMapper.useQuota(quotaCost, bodyJson.getString("id"));
+
+            quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
         } catch (Exception e) {
             e.printStackTrace();
             String errMess = e.toString();
@@ -134,21 +143,21 @@ public class AiController {
                 //将请求JSON变为向API发送的JSON
                 JSONArray userContent = new JSONArray();
                 JSONObject imgJSON = new JSONObject();
-                imgJSON.put("type","image_url");
+                imgJSON.put("type", "image_url");
                 JSONObject imageUrlJson = new JSONObject();
-                imageUrlJson.put("url",bodyJson.getString("img"));
-                imgJSON.put("image_url",imageUrlJson);
+                imageUrlJson.put("url", bodyJson.getString("img"));
+                imgJSON.put("image_url", imageUrlJson);
                 userContent.add(imgJSON);
                 JSONObject textJson = new JSONObject();
-                textJson.put("type","text");
-                textJson.put("text","图中有一道或若干道题目，请你告诉我它/它们的答案；[如果是数学题目（包括运筹学，高等数学）请您结合题目内容告诉我每一步的解题步骤]，以下是我提前使用OCR对图片进行识别，读取出来的内容，供您参考校对，以免出现识别错误："+bodyJson.getString("text"));
+                textJson.put("type", "text");
+                textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案；[如果是数学题目（包括运筹学，高等数学）请您结合题目内容告诉我每一步的解题步骤]，以下是我提前使用OCR对图片进行识别，读取出来的内容，供您参考校对，以免出现识别错误：" + bodyJson.getString("text"));
                 userContent.add(textJson);
                 JSONObject roleJson = new JSONObject();
-                roleJson.put("role","user");
-                roleJson.put("content",userContent);
+                roleJson.put("role", "user");
+                roleJson.put("content", userContent);
                 JSONArray messages = new JSONArray();
                 messages.add(roleJson);
-                JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages,modelList[0]);
+                JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, modelList[0]);
 
                 StringBuffer sb = new StringBuffer();
                 //抄送给API
@@ -156,7 +165,8 @@ public class AiController {
                 System.out.println(sb);
                 response.getWriter().write("");
                 response.getWriter().flush();
-                vipMapper.useQuota(quotaCost, bodyJson.getString("id"));
+
+                quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
 
                 //加入历史
                 BQ bq = new BQ();
@@ -177,18 +187,18 @@ public class AiController {
                 //将请求JSON变为向API发送的JSON
                 JSONArray userContent = new JSONArray();
                 JSONObject imgJSON = new JSONObject();
-                imgJSON.put("type","image_url");
+                imgJSON.put("type", "image_url");
                 JSONObject imageUrlJson = new JSONObject();
-                imageUrlJson.put("url",bodyJson.getString("img"));
-                imgJSON.put("image_url",imageUrlJson);
+                imageUrlJson.put("url", bodyJson.getString("img"));
+                imgJSON.put("image_url", imageUrlJson);
                 userContent.add(imgJSON);
                 JSONObject textJson = new JSONObject();
-                textJson.put("type","text");
-                textJson.put("text","识别图中题目，告诉我题干，存在图片时请注意要描述图片里的内容，存在公式时请描述公示内容，存在表格时描述表格内容;以下是我先行使用OCR识别出来的结果，请根据图片内容进行修正（例如补充图片，表格的内容）：" + bodyJson.getString("text"));
+                textJson.put("type", "text");
+                textJson.put("text", "识别图中题目，告诉我题干，存在图片时请注意要描述图片里的内容，存在公式时请描述公示内容，存在表格时描述表格内容;以下是我先行使用OCR识别出来的结果，请根据图片内容进行修正（例如补充图片，表格的内容）：" + bodyJson.getString("text"));
                 userContent.add(textJson);
                 JSONObject roleJson = new JSONObject();
-                roleJson.put("role","user");
-                roleJson.put("content",userContent);
+                roleJson.put("role", "user");
+                roleJson.put("content", userContent);
                 JSONArray messages = new JSONArray();
                 messages.add(roleJson);
                 JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, modelList[0]);
@@ -208,7 +218,7 @@ public class AiController {
                 int quotaCost2 = aiService.postAiMessagesToChatGPTAPI(o1Request, response, sb1);
                 System.out.println(sb1);
 
-                vipMapper.useQuota(quotaCost + quotaCost2, bodyJson.getString("id"));
+                quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost + quotaCost2);
 
                 //加入历史
                 BQ bq = new BQ();
@@ -246,8 +256,8 @@ public class AiController {
             System.out.println(sb);
             response.getWriter().write("");
             response.getWriter().flush();
-            //将要变更为rabbitMQ处理，自动重试
-            vipMapper.useQuota(quotaCost, bodyJson.getString("id"));
+
+            quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
 
             //如果ai反馈非空且，数据库操作
             if (!sb.isEmpty()) {

@@ -2,9 +2,12 @@ package com.tabnote.server.tabnoteserverboot;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.services.AccountService;
 import com.tabnote.server.tabnoteserverboot.services.XianService;
 import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DuplicateKeyException;
@@ -23,16 +26,28 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.tabnote.server.tabnoteserverboot.define.MQName.EXCHANGE_DIRECT;
+import static com.tabnote.server.tabnoteserverboot.define.MQName.ROUTING_KEY;
+
 
 @SpringBootTest
 class TabNoteServerBootApplicationTests {
-    XianService xianService;
+
+    private final RabbitTemplate rabbitTemplate;
+
     @Autowired
-    public void setXianService(XianService xianService) {
-        this.xianService = xianService;
+    public TabNoteServerBootApplicationTests(RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
     }
+
+    private QuotaDeductionPublisher quotaDeductionPublisher;
+    @Autowired
+    public void setQuotaDeductionPublisher(QuotaDeductionPublisher quotaDeductionPublisher) {
+        this.quotaDeductionPublisher = quotaDeductionPublisher;
+    }
+
     @Test
-    public void test() throws Exception {
-        xianService.scheduledTask();
+    public void publish() {
+
     }
 }

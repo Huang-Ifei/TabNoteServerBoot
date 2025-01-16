@@ -4,15 +4,11 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.models.BQ;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 
 public interface AiServiceInterface {
-    String modelDefine(JSONObject bodyJson);
-
-    JSONObject buildRequestJSON(JSONArray messages, String model);
-    //抄送给API
-    void postAiMessagesToAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
 
     //将请求JSON变为向ChatGPT API发送的JSON
     JSONObject buildChatGPTRequestJSON(JSONArray messages, String model);
@@ -47,4 +43,7 @@ public interface AiServiceInterface {
     void returnAdminMess(HttpServletResponse response,String s)throws IOException;
 
     void returnErrMess(HttpServletResponse response, String e)throws Exception;
+
+    @Transactional
+    void useQuota(int quotaCost, String id);
 }
