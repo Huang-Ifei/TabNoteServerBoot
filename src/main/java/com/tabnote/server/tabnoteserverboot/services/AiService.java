@@ -606,7 +606,9 @@ public class AiService implements AiServiceInterface {
     @Override
     public void useQuota(int quotaCost, String id){
         try{
-            vipMapper.useQuota(quotaCost,id);
+            //使用for update悲观锁
+            String vip_id = vipMapper.selectVipIdByUserId(id);
+            vipMapper.useQuota(quotaCost,vip_id);
         } catch (Exception e) {
             throw e;
         }

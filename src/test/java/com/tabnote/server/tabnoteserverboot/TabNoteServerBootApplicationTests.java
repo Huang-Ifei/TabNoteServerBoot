@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.services.AccountService;
+import com.tabnote.server.tabnoteserverboot.services.TabNoteService;
 import com.tabnote.server.tabnoteserverboot.services.XianService;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -46,8 +47,15 @@ class TabNoteServerBootApplicationTests {
         this.quotaDeductionPublisher = quotaDeductionPublisher;
     }
 
+    private TabNoteService tabNoteService;
+
+    @Autowired
+    public void setTabNoteService(TabNoteService tabNoteService) {
+        this.tabNoteService = tabNoteService;
+    }
+
     @Test
     public void publish() {
-
+        System.out.println(tabNoteService.tagsRecommended("13023878240"));
     }
 }

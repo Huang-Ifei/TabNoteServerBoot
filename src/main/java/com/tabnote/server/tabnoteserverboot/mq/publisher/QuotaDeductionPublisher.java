@@ -40,6 +40,7 @@ public class QuotaDeductionPublisher {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("quota",cost);
         jsonObject.put("user_id",id);
+        jsonObject.put("timestamp",System.currentTimeMillis());
         this.publish(jsonObject.toString());
     }
 }

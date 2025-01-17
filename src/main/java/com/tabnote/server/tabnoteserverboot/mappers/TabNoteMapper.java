@@ -5,8 +5,10 @@ import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteMessage;
 import org.apache.ibatis.annotations.*;
 
+import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface TabNoteMapper {
@@ -71,4 +73,17 @@ public interface TabNoteMapper {
     @Insert("insert into click_note values (#{t_id},#{u_id},CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE date = CURRENT_TIMESTAMP;")
     void clickNote(@Param("t_id")String tab_note_id,@Param("u_id")String usr_id);
 
+    //获取标签
+    @Select("select tab_note_id from click_note where usr_id=#{usr_id} order by date desc limit 1;")
+    String selectLastTabNoteId(@Param("usr_id")String usr_id);
+    @Select("select usr_id,tags,date_time from tab_notes where tab_note_id=#{tab_note_id};")
+    Map<String,Object> selectUTD(@Param("tab_note_id")String tab_note_id);
+    @Select("select tab_note_name from tab_notes where usr_id = #{usr_id} and date_time > #{date_time} order by date_time limit 1")
+    String selectUserNextTNN(@Param("usr_id")String usr_id,@Param("date_time") Timestamp date_time);
+    @Select("select tab_note_name from tab_notes where tags like concat('%',#{tag},'%') and date_time > #{date_time} order by date_time limit 1")
+    String selectTagNextTNN(@Param("tag")String tag,@Param("date_time")Timestamp date_time);
+    @Select("select l.tags from tab_notes l join (select tab_note_id from click_note where usr_id = #{usr_id} order by date desc limit 15) r on l.tab_note_id = r.tab_note_id")
+    List<String> selectUserLastTags(@Param("usr_id")String usr_id);
+    @Select("select l.tags from tab_notes l join (select tab_note_id from tab_notes order by date_time desc limit 30) r on l.tab_note_id = r.tab_note_id")
+    List<String> selectAllLastTags();
 }

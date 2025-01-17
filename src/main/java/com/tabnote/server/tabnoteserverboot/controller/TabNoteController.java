@@ -34,21 +34,33 @@ public class TabNoteController {
         }
     }
 
+    @PostMapping("tags")
+    public ResponseEntity<String> getTags(HttpServletRequest request, @RequestBody String body) {
+        System.out.println(request.getRemoteAddr() + "get_tags");
+        try {
+            JSONObject jsonObject = JSONObject.parseObject(body);
+            return sendMes(tabNoteService.tagsRecommended(jsonObject.getString("usr_id")));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return sendErr();
+        }
+    }
+
     @PostMapping("tab_note_add")
     public ResponseEntity<String> addTabNote(@RequestBody String requestBody, HttpServletRequest request) {
         System.out.println(request.getRemoteAddr() + "add_tab_note");
-        if (requestBody.length()>10*1024*1024){
+        if (requestBody.length() > 10 * 1024 * 1024) {
             return sendErr();
         }
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            if (!jsonObject.containsKey("file")){
-                jsonObject.put("file","");
+            if (!jsonObject.containsKey("file")) {
+                jsonObject.put("file", "");
             }
-            if (!jsonObject.containsKey("pics")){
+            if (!jsonObject.containsKey("pics")) {
                 jsonObject.putArray("pics");
             }
-            return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), request.getRemoteAddr(), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"),jsonObject.getString("file"),jsonObject.getJSONArray("pics"),jsonObject.getInteger("display")));
+            return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), request.getRemoteAddr(), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"), jsonObject.getString("file"), jsonObject.getJSONArray("pics"), jsonObject.getInteger("display")));
         } catch (Exception e) {
             e.printStackTrace();
             return sendErr();
@@ -72,19 +84,19 @@ public class TabNoteController {
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
 
-            if (jsonObject.containsKey("key_word")&&!jsonObject.getString("key_word").isEmpty()&&jsonObject.containsKey("class_name")&&!jsonObject.getString("class_name").isEmpty()){
+            if (jsonObject.containsKey("key_word") && !jsonObject.getString("key_word").isEmpty() && jsonObject.containsKey("class_name") && !jsonObject.getString("class_name").isEmpty()) {
                 System.out.println(request.getRemoteAddr() + "tab_note_page k c");
                 return sendMes(tabNoteService.searchTabNoteWithCls(jsonObject.getString("class_name"), jsonObject.getString("key_word"), jsonObject.getInteger("page")));
-            } else if (jsonObject.containsKey("class_name")&&!jsonObject.getString("class_name").isEmpty()){
+            } else if (jsonObject.containsKey("class_name") && !jsonObject.getString("class_name").isEmpty()) {
                 System.out.println(request.getRemoteAddr() + "tab_note_page c");
                 return sendMes(tabNoteService.searchTabNoteByClass(jsonObject.getString("class_name"), jsonObject.getInteger("page")));
-            } else if (jsonObject.containsKey("key_word")&&!jsonObject.getString("key_word").isEmpty()) {
+            } else if (jsonObject.containsKey("key_word") && !jsonObject.getString("key_word").isEmpty()) {
                 System.out.println(request.getRemoteAddr() + "tab_note_page k");
                 return sendMes(tabNoteService.searchTabNote(jsonObject.getString("key_word"), jsonObject.getInteger("page")));
-            } else if (jsonObject.containsKey("id")&&!jsonObject.getString("id").isEmpty()){
+            } else if (jsonObject.containsKey("id") && !jsonObject.getString("id").isEmpty()) {
                 System.out.println(request.getRemoteAddr() + "tab_note_page id");
                 return sendMes(tabNoteService.searchTabNoteById(jsonObject.getString("id"), jsonObject.getInteger("page")));
-            } else if (jsonObject.containsKey("page")){
+            } else if (jsonObject.containsKey("page")) {
                 System.out.println(request.getRemoteAddr() + "tab_note_page common");
                 return sendMes(tabNoteService.getPageTabNotes(jsonObject.getInteger("page")));
             } else {

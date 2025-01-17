@@ -3,6 +3,7 @@ package com.tabnote.server.tabnoteserverboot.services;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
+import com.tabnote.server.tabnoteserverboot.component.TagsListProcess;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
@@ -17,57 +18,58 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class TabNoteService implements TabNoteServiceInterface {
+
     TabNoteMapper tabNoteMapper;
     ClassMapper classMapper;
     AccountMapper accountMapper;
     FileService fileService;
     LikeCount likeCount;
     VipMapper vipMapper;
-
     @Autowired
     public void setVipMapper(VipMapper vipMapper) {
         this.vipMapper = vipMapper;
     }
-
     @Autowired
     public void setTabNoteMapper(TabNoteMapper tabNoteMapper) {
         this.tabNoteMapper = tabNoteMapper;
     }
-
     @Autowired
     public void setClassMapper(ClassMapper classMapper) {
         this.classMapper = classMapper;
     }
-
     @Autowired
     public void setAccountMapper(AccountMapper accountMapper) {
         this.accountMapper = accountMapper;
     }
-
     @Autowired
     public void setFileService(FileService fileService) {
         this.fileService = fileService;
     }
-
     @Autowired
     public void setLikeCount(LikeCount likeCount) {
         this.likeCount = likeCount;
     }
 
     TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
-
     @Autowired
     public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
         this.tabNoteInfiniteEncryption = tie;
     }
 
+    TagsListProcess tagsListProcess;
+    @Autowired
+    public void setTagsListProcess(TagsListProcess tagsListProcess) {
+        this.tagsListProcess = tagsListProcess;
+    }
+
+    //获取分类
     @Override
     public JSONObject getClasses() {
         JSONObject json = new JSONObject();
@@ -85,7 +87,71 @@ public class TabNoteService implements TabNoteServiceInterface {
         return json;
     }
 
+    //获取推荐标签
+    @Transactional(noRollbackFor = NullPointerException.class)
+    @Override
+    public JSONObject tagsRecommended(String id) {
+        JSONObject json = new JSONObject();
+        HashSet<String> tags = new HashSet<>();
+        HashSet<String> userSetTags = new HashSet<>();
+        try {
+            String lastReadTabNoteId = tabNoteMapper.selectLastTabNoteId(id);
+            Map<String, Object> uat = tabNoteMapper.selectUTD(lastReadTabNoteId);
+            Timestamp lastReadTabNoteDateTime = (Timestamp) uat.get("date_time");
+            //连读推荐（最近浏览的作者的下一篇文章）
+            String lastReadTabNoteUserId = (String) uat.get("usr_id");
+            String untnn = tabNoteMapper.selectUserNextTNN(lastReadTabNoteUserId, lastReadTabNoteDateTime);
+            if (untnn != null) {
+                userSetTags.add(untnn);
+            }
+            //连读推荐（最近浏览的所有标签的下一篇文章）
+            String lastReadTabNoteTags = (String) uat.get("tags");
+            lastReadTabNoteTags = lastReadTabNoteTags.replaceAll(" ", "");
+            String[] lrtnts = lastReadTabNoteTags.split("#");
+            for (int i = 0; i < lrtnts.length && i < 100; i++) {
+                String tagFindNext = tabNoteMapper.selectTagNextTNN(lrtnts[i], lastReadTabNoteDateTime);
+                if (tagFindNext != null) {
+                    userSetTags.add(tagFindNext);
+                }
+            }
+        } catch (NullPointerException e) {
+            System.out.println("推荐系统无法查询上次读取的内容，用户id为：" + id);
+        } catch (Exception e) {
+            json.put("response", "failed");
+            e.printStackTrace();
+        }
+        //最近访问的15个贴文的标签进行统计选出最高的3个
+        try {
+            List<String> ults = tabNoteMapper.selectUserLastTags(id);
+            List<String> userTags = tagsListProcess.tagsListChoiceBestModern(ults, 3);
+            tags.addAll(userTags);
+        } catch (NullPointerException e) {
+            System.out.println("推荐系统无法查询最后读取15条的内容，用户id为：" + id);
+        } catch (Exception e) {
+            json.put("response", "failed");
+            e.printStackTrace();
+        }
+        //最新的30个贴文的标签进行统计选出最高的5个
+        try {
+            List<String> alts = tabNoteMapper.selectAllLastTags();
+            List<String> allTags = tagsListProcess.tagsListChoiceBestModern(alts, 5);
+            tags.addAll(allTags);
+        } catch (NullPointerException e) {
+            System.out.println("推荐系统无法查询最后读取15条的内容，用户id为：" + id);
+        } catch (Exception e) {
+            json.put("response", "failed");
+            e.printStackTrace();
+        }
+        JSONArray jsonArray = new JSONArray();
+        jsonArray.addAll(userSetTags);
+        jsonArray.addAll(tags);
+        json.put("tags", jsonArray);
+        json.put("response", "success");
 
+        return json;
+    }
+
+    //获取所有的贴文数量并计算页数
     @Override
     public JSONObject getPageCount() {
         JSONObject returnJSON = new JSONObject();
@@ -105,6 +171,8 @@ public class TabNoteService implements TabNoteServiceInterface {
         return returnJSON;
     }
 
+    //不设关键词获取某一页
+    @Transactional
     @Override
     public JSONObject getPageTabNotes(int page) {
         long startTime1 = System.currentTimeMillis();
@@ -145,11 +213,14 @@ public class TabNoteService implements TabNoteServiceInterface {
         } catch (Exception e) {
             e.printStackTrace();
             returnJSON.put("response", "failed");
+            throw e;
         }
         System.out.println("****get tab note time(ms)：" + (System.currentTimeMillis() - startTime1));
         return returnJSON;
     }
 
+    //点赞
+    @Transactional(noRollbackFor = {DuplicateKeyException.class})
     @Override
     public JSONObject likeTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
@@ -164,11 +235,13 @@ public class TabNoteService implements TabNoteServiceInterface {
         } catch (Exception e) {
             returnJSON.put("response", "failed");
             e.printStackTrace();
+            throw e;
         }
         return returnJSON;
     }
 
-    @Transactional(rollbackFor = Exception.class, noRollbackFor = {NullPointerException.class})
+    //获取某个
+    @Transactional
     @Override
     public JSONObject getTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
@@ -210,13 +283,14 @@ public class TabNoteService implements TabNoteServiceInterface {
         return returnJSON;
     }
 
+    @Transactional
     @Override
     public JSONObject insertTabNote(String token, String usr_id, String ip_address, String class_name, String tab_note_name, String tags, String tab_note, String base64FileString, JSONArray imgs, int display) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id, token)) {
                 RankAndQuota rankAndQuota = vipMapper.selectRankByUserId(usr_id);
-                if (rankAndQuota==null||rankAndQuota.passAFAPP()) {
+                if (rankAndQuota == null || rankAndQuota.passAFAPP()) {
                     String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();
 
@@ -228,7 +302,6 @@ public class TabNoteService implements TabNoteServiceInterface {
                         String fileName = "";
                         JSONObject imgJson = new JSONObject();
                         imgJson.putArray("images");
-
                         try {
                             if (!imgs.isEmpty()) {
                                 for (int i = 0; i < imgs.size(); i++) {
@@ -240,6 +313,7 @@ public class TabNoteService implements TabNoteServiceInterface {
                             return returnJSON;
                         }
 
+                        //附件保存
                         try {
                             if (!base64FileString.isEmpty()) {
                                 fileName = String.valueOf(fileService.insertFileWithOutIdCheck(base64FileString));
@@ -260,6 +334,7 @@ public class TabNoteService implements TabNoteServiceInterface {
         } catch (Exception e) {
             e.printStackTrace();
             returnJSON.put("response", "failed");
+            throw e;
         }
 
         return returnJSON;
@@ -331,11 +406,13 @@ public class TabNoteService implements TabNoteServiceInterface {
         } catch (Exception e) {
             e.printStackTrace();
             returnJSON.put("response", "failed");
+            throw e;
         }
         return returnJSON;
     }
 
     @Override
+    @Transactional
     public JSONObject searchTabNoteWithCls(String className, String key, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
@@ -370,12 +447,14 @@ public class TabNoteService implements TabNoteServiceInterface {
         } catch (Exception e) {
             e.printStackTrace();
             returnJSON.put("response", "failed");
+            throw e;
         }
         return returnJSON;
     }
 
 
     @Override
+    @Transactional
     public JSONObject searchTabNoteById(String id, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
@@ -415,6 +494,7 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     @Override
+    @Transactional
     public JSONObject searchTabNoteByClass(String className, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();

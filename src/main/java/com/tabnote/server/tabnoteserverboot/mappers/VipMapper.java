@@ -29,7 +29,11 @@ public interface VipMapper {
     @Update("update vip set `rank`=#{rank},`quota`=#{quota} where vip_id = #{vip_id}")
     void updateVipRank(@Param("vip_id")String vip_id,@Param("rank")int rank,@Param("quota")int quota);
 
-    @Update("update vip set `quota`=`quota`-#{quota} where usr_id=#{id} and start_time<=NOW() and end_time>NOW()")
-    void useQuota(@Param("quota")int quota,@Param("id")String id);
+    //锁住对应的行
+    @Select("select vip_id from vip where usr_id=#{id} and start_time<=NOW() and end_time>NOW() for update")
+    String selectVipIdByUserId(@Param("id")String id);
+    //进行修改
+    @Update("update vip set `quota`=`quota`-#{quota} where vip_id=#{vip_id}")
+    void useQuota(@Param("quota")int quota,@Param("vip_id")String vip_id);
 
 }

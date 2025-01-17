@@ -2,10 +2,15 @@ package com.tabnote.server.tabnoteserverboot.services.inteface;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface TabNoteServiceInterface {
 
     JSONObject getClasses();
+
+    //获取推荐标签
+    @Transactional(noRollbackFor = NullPointerException.class)
+    JSONObject tagsRecommended(String id);
 
     JSONObject getPageCount();
 
