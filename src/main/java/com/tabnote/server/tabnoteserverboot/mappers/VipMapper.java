@@ -29,6 +29,9 @@ public interface VipMapper {
     @Update("update vip set `rank`=#{rank},`quota`=#{quota} where vip_id = #{vip_id}")
     void updateVipRank(@Param("vip_id")String vip_id,@Param("rank")int rank,@Param("quota")int quota);
 
+    @Select("select quota from vip where vip_id = #{vip_id}")
+    int selectQuotaByVipId(@Param("vip_id")String vip_id);
+
     //锁住对应的行
     @Select("select vip_id from vip where usr_id=#{id} and start_time<=NOW() and end_time>NOW() for update")
     String selectVipIdByUserId(@Param("id")String id);

@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 
 @Service
-public class AccountService implements AccountServiceInterface {
+public class AccountServiceImpl implements AccountServiceInterface {
 
     AccountMapper mapper;
     @Autowired
@@ -111,7 +111,7 @@ public class AccountService implements AccountServiceInterface {
                 return jsonObject;
             }
             HashMap<String, String> hashMap = mapper.searchById(id);
-            String token = hashMap.hashCode() + "" + address.hashCode();
+            String token = hashMap.hashCode()  + tabNoteInfiniteEncryption.getTokenInput();
 
             if (tabNoteInfiniteEncryption.encryptionPasswordCheckIn(hashMap.get("password"),password)) {
                 LocalDate localDate = LocalDate.now();
@@ -174,6 +174,13 @@ public class AccountService implements AccountServiceInterface {
 
             if (id.equals("") || pwd.equals("") || name.equals("")) {
                 jsonObject.put("response", "请正确输入");
+                return jsonObject;
+            }
+            String prohibitedCharsRegex = "[/?#&=;%+<> ]";
+
+            // 使用 String 的 matches 方法来检查是否含有任何违规字符
+            if (id.matches(".*" + prohibitedCharsRegex + ".*")||pwd.matches(".*" + prohibitedCharsRegex + ".*")||name.matches(".*" + prohibitedCharsRegex + ".*")) {
+                jsonObject.put("response", "存在违规的字符:/?#&=;%+<> ");
                 return jsonObject;
             }
             HashMap<String, String> idCheck = mapper.searchById(id);
@@ -247,7 +254,7 @@ public class AccountService implements AccountServiceInterface {
         return json;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional
     @Override
     public JSONObject resetID(JSONObject jsonObject) {
 
@@ -283,6 +290,7 @@ public class AccountService implements AccountServiceInterface {
                 resetIdMapper.updateNoteAi(id,new_id);
                 resetIdMapper.updateBQId(id,new_id);
                 resetIdMapper.updateVIPId(id,new_id);
+                resetIdMapper.updateLCId(id,new_id);
 
                 File accountImg = new File("accountImg/"+id+".jpg");
                 if (accountImg.exists()){

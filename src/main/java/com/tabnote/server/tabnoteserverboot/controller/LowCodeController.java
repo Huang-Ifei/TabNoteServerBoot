@@ -1,11 +1,9 @@
 package com.tabnote.server.tabnoteserverboot.controller;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
-import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
+import com.tabnote.server.tabnoteserverboot.services.inteface.LowCode;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -14,29 +12,28 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.io.IOException;
-
 
 @CrossOrigin
 @Controller
-public class FileController {
-    FileServiceInterface fileService;
+@RequestMapping("low_code")
+public class LowCodeController {
+    LowCode lowCode;
     @Autowired
-    public void setFileService(FileServiceInterface fileService) {
-        this.fileService = fileService;
-    }
-    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
-    @Autowired
-    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tabNoteInfiniteEncryption) {
-        this.tabNoteInfiniteEncryption = tabNoteInfiniteEncryption;
+    public void setLowCode(LowCode lowCode) {
+        this.lowCode = lowCode;
     }
 
-    @GetMapping("file_select")
-    public ResponseEntity<Resource> getTabNoteFile(@RequestParam String name, HttpServletRequest request) throws Exception {
-        System.out.println("download file" + tabNoteInfiniteEncryption.proxyGetIp(request));
-        // 创建Resource对象
-        Resource resource = new FileSystemResource("tabNoteFiles/" + name +".zip");
-        // 设置下载文件头信息
+    @PostMapping("huffman")
+    public ResponseEntity<String> huffman(HttpServletRequest request) {
+        JSONObject jsonObject = JSONObject.parseObject((String) request.getAttribute("body"));
+        return sendMes(lowCode.insertHuffmanLCID(jsonObject.getString("id"), jsonObject.getString("token"), jsonObject.getString("language"), jsonObject.getString("environment"), jsonObject.getString("save")));
+    }
+
+    @GetMapping("file")
+    public ResponseEntity<Resource> file(@RequestParam String lc_id) {
+        Resource resource = lowCode.getFile(lc_id);
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Disposition", "attachment; filename=" + resource.getFilename());
         try {
@@ -47,12 +44,11 @@ public class FileController {
         }
         // 创建ResponseEntity对象
         ResponseEntity<Resource> response = new ResponseEntity<>(resource, headers, HttpStatus.OK);
-        // 返回ResponseEntity对象
         return response;
     }
 
     private ResponseEntity<String> sendErr() {
-        return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body("");
+        return ResponseEntity.badRequest().body("err");
     }
 
     private ResponseEntity<String> sendMes(JSONObject sendJSON) {

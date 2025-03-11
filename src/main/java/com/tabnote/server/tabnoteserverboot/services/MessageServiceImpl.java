@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-public class MessageService implements MessageServiceInterface {
+public class MessageServiceImpl implements MessageServiceInterface {
     AccountMapper accountMapper;
     @Autowired
     public void setAccountMapper(AccountMapper accountMapper) {

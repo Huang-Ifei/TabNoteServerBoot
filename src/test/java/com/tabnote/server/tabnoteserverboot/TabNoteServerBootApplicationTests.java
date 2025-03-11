@@ -1,10 +1,12 @@
 package com.tabnote.server.tabnoteserverboot;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.OCR;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
-import com.tabnote.server.tabnoteserverboot.services.AccountService;
-import com.tabnote.server.tabnoteserverboot.services.TabNoteService;
+import com.tabnote.server.tabnoteserverboot.services.LowCodeServiceImpl;
 import com.tabnote.server.tabnoteserverboot.services.XianService;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -15,18 +17,22 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.*;
 import java.net.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
+import java.util.Base64;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import static com.tabnote.server.tabnoteserverboot.define.AiList.*;
 import static com.tabnote.server.tabnoteserverboot.define.MQName.EXCHANGE_DIRECT;
 import static com.tabnote.server.tabnoteserverboot.define.MQName.ROUTING_KEY;
 
@@ -42,20 +48,26 @@ class TabNoteServerBootApplicationTests {
     }
 
     private QuotaDeductionPublisher quotaDeductionPublisher;
+
     @Autowired
     public void setQuotaDeductionPublisher(QuotaDeductionPublisher quotaDeductionPublisher) {
         this.quotaDeductionPublisher = quotaDeductionPublisher;
     }
 
-    private TabNoteService tabNoteService;
+    @Autowired
+    LowCodeServiceImpl lowCodeService;
+
+    TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
 
     @Autowired
-    public void setTabNoteService(TabNoteService tabNoteService) {
-        this.tabNoteService = tabNoteService;
+    public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tabNoteInfiniteEncryption) {
+        this.tabNoteInfiniteEncryption = tabNoteInfiniteEncryption;
     }
 
+    @Autowired
+    OCR ocr;
     @Test
-    public void publish() {
-        System.out.println(tabNoteService.tagsRecommended("13023878240"));
+    public void t() throws Exception {
+
     }
 }

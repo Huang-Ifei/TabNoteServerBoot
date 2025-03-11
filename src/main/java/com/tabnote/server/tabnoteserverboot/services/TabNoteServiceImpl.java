@@ -12,6 +12,7 @@ import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
 import com.tabnote.server.tabnoteserverboot.models.TabNote;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
 import com.tabnote.server.tabnoteserverboot.redis.LikeCount;
+import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
 import com.tabnote.server.tabnoteserverboot.services.inteface.TabNoteServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
@@ -24,12 +25,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
-public class TabNoteService implements TabNoteServiceInterface {
+public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
     TabNoteMapper tabNoteMapper;
     ClassMapper classMapper;
     AccountMapper accountMapper;
-    FileService fileService;
+    FileServiceInterface fileService;
     LikeCount likeCount;
     VipMapper vipMapper;
     @Autowired
@@ -49,7 +50,7 @@ public class TabNoteService implements TabNoteServiceInterface {
         this.accountMapper = accountMapper;
     }
     @Autowired
-    public void setFileService(FileService fileService) {
+    public void setFileService(FileServiceInterface fileService) {
         this.fileService = fileService;
     }
     @Autowired
@@ -88,7 +89,6 @@ public class TabNoteService implements TabNoteServiceInterface {
     }
 
     //获取推荐标签
-    @Transactional(noRollbackFor = NullPointerException.class)
     @Override
     public JSONObject tagsRecommended(String id) {
         JSONObject json = new JSONObject();
@@ -137,7 +137,7 @@ public class TabNoteService implements TabNoteServiceInterface {
             List<String> allTags = tagsListProcess.tagsListChoiceBestModern(alts, 5);
             tags.addAll(allTags);
         } catch (NullPointerException e) {
-            System.out.println("推荐系统无法查询最后读取15条的内容，用户id为：" + id);
+            System.out.println("推荐系统无法查询最近30个贴文");
         } catch (Exception e) {
             json.put("response", "failed");
             e.printStackTrace();

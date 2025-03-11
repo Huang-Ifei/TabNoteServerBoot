@@ -2,7 +2,7 @@ package com.tabnote.server.tabnoteserverboot.mq.consumer;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.rabbitmq.client.Channel;
-import com.tabnote.server.tabnoteserverboot.services.AiService;
+import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.Exchange;
 import org.springframework.amqp.rabbit.annotation.Queue;
@@ -22,10 +22,10 @@ import static com.tabnote.server.tabnoteserverboot.define.MQName.QUEUE_NAME;
 @Component
 public class QuotaDeductionConsumer {
 
-    private AiService aiService;
+    private AiServiceInterface aiService;
 
     @Autowired
-    public void setAiService(AiService aiService) {
+    public void setAiService(AiServiceInterface aiService) {
         this.aiService = aiService;
     }
 

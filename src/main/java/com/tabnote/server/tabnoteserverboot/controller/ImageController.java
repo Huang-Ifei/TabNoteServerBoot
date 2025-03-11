@@ -1,7 +1,7 @@
 package com.tabnote.server.tabnoteserverboot.controller;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.tabnote.server.tabnoteserverboot.services.FileService;
+import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +33,9 @@ public class ImageController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sendJSON.toString());
     }
 
-    FileService fileService;
+    FileServiceInterface fileService;
     @Autowired
-    public void setFileService(FileService fileService) {
+    public void setFileService(FileServiceInterface fileService) {
         this.fileService = fileService;
     }
 

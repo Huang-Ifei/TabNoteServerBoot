@@ -1,7 +1,10 @@
 package com.tabnote.server.tabnoteserverboot.component;
 
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.BadPaddingException;
@@ -25,9 +28,11 @@ public class TabNoteInfiniteEncryption {
 
     private String publicKey = "";
     private String privateKey = "";
+    private String tokenInput = "";
 
-    public TabNoteInfiniteEncryption() {
-        Thread de = new DefiniteEncryption(this);
+    @PostConstruct
+    public void doPostConstruct() {
+        DefiniteEncryption de = new DefiniteEncryption(this);
         de.start();
     }
 
@@ -48,10 +53,15 @@ public class TabNoteInfiniteEncryption {
 
         this.publicKey = Base64.getEncoder().encodeToString(publicKey.getEncoded());
         this.privateKey = Base64.getEncoder().encodeToString(privateKey.getEncoded());
+        this.tokenInput = Base64.getEncoder().encodeToString(String.valueOf(System.currentTimeMillis()).getBytes());
     }
 
     public String getPublicKey() {
         return publicKey;
+    }
+
+    public String getTokenInput(){
+        return tokenInput;
     }
 
     public String decrypt(String s){
@@ -170,5 +180,16 @@ public class TabNoteInfiniteEncryption {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public String proxyGetIp(HttpServletRequest request) {
+        // 从头部获取真实的客户端 IP 地址
+        String ip = request.getHeader("X-Forwarded-For");
+
+        // 如果没有找到 X-Forwarded-For，可能是直接连接的客户端
+        if (ip == null || ip.isEmpty()) {
+            ip = request.getRemoteAddr();
+        }
+        return ip;
     }
 }

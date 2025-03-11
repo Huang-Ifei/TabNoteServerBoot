@@ -13,6 +13,13 @@ public interface AiServiceInterface {
     //将请求JSON变为向ChatGPT API发送的JSON
     JSONObject buildChatGPTRequestJSON(JSONArray messages, String model);
 
+    JSONArray buildBQImgRequestToJSONArray(JSONObject bodyJson, String type);
+
+    JSONArray buildO1Message(StringBuffer sb);
+
+    //抄送给ChatGPT API
+    int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
+
     //抄送给API
     int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
 

@@ -40,4 +40,6 @@ public interface ResetIdMapper {
     void resetID(@Param("old_id") String old_id, @Param("id") String id);
     @Update("UPDATE vip SET usr_id = #{newId} WHERE usr_id=#{oldId}")
     void updateVIPId(@Param("oldId") String oldId, @Param("newId") String newId);
+    @Update("UPDATE  low_code SET  usr_id= #{newId} WHERE usr_id=#{oldId}")
+    void updateLCId(@Param("oldId") String oldId, @Param("newId") String newId);
 }

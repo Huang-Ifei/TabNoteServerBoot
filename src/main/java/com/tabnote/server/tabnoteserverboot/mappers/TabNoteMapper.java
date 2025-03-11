@@ -82,8 +82,8 @@ public interface TabNoteMapper {
     String selectUserNextTNN(@Param("usr_id")String usr_id,@Param("date_time") Timestamp date_time);
     @Select("select tab_note_name from tab_notes where tags like concat('%',#{tag},'%') and date_time > #{date_time} order by date_time limit 1")
     String selectTagNextTNN(@Param("tag")String tag,@Param("date_time")Timestamp date_time);
-    @Select("select l.tags from tab_notes l join (select tab_note_id from click_note where usr_id = #{usr_id} order by date desc limit 15) r on l.tab_note_id = r.tab_note_id")
+    @Select("select l.tags from (select tags,tab_note_id from tab_notes order by date_time desc limit 200) l join (select tab_note_id from click_note where usr_id = #{usr_id} order by date desc limit 15) r on l.tab_note_id = r.tab_note_id")
     List<String> selectUserLastTags(@Param("usr_id")String usr_id);
-    @Select("select l.tags from tab_notes l join (select tab_note_id from tab_notes order by date_time desc limit 30) r on l.tab_note_id = r.tab_note_id")
+    @Select("select l.tags from (select tags,tab_note_id from tab_notes order by date_time desc limit 200) l join (select tab_note_id from click_note order by date desc limit 50) r on l.tab_note_id = r.tab_note_id")
     List<String> selectAllLastTags();
 }

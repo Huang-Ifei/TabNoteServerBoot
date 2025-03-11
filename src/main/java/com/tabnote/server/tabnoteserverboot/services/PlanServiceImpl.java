@@ -15,7 +15,7 @@ import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.List;
 
 @Service
-public class PlanService implements PlanServiceInterface {
+public class PlanServiceImpl implements PlanServiceInterface {
 
     AccountMapper accountMapper;
     PlanMapper planMapper;
@@ -214,29 +214,32 @@ public class PlanService implements PlanServiceInterface {
                     boolean done = plan.getBoolean("done");
 
                     boolean find = false;
-                    int count = -1;
 
                     for(Plan p : cloudPlans){
-                        count++;
                         if (p.getPlan_id().equals(plan_id)){
                             find = true;
                             if (p.getContent().equals(content)&&p.getDate().equals(date)&&p.getLink().equals(link)&&p.getDone()==done){
-                                cloudPlans.remove(count);
-                                break;
+                                cloudPlans.remove(p);
                             }else{
-                                //内容以客户端为准
-                                planMapper.resetPlan(plan_id,content,link,date);
-                                cloudPlans.get(count).setPlan_id(plan_id);
-                                cloudPlans.get(count).setContent(content);
-                                cloudPlans.get(count).setLink(link);
-                                cloudPlans.get(count).setDate(date);
+                                //内容以客户端为准变更为已云端为准
+//                                planMapper.resetPlan(plan_id,content,link,date);
+//                                cloudPlans.get(count).setPlan_id(plan_id);
+//                                cloudPlans.get(count).setContent(content);
+//                                cloudPlans.get(count).setLink(link);
+//                                cloudPlans.get(count).setDate(date);
                                 //是否完成以两个任意一个完成了就完成了,因为返回的是云端数据，这里只要不删除云端数据，返回的就会按照云端的来,所以如果是云端没done那么就要done，如果是客户端没done自然会返回数据
                                 if (!p.getDone()&&done){
+                                    //云端未完成，客户端已完成
                                     planMapper.addHisPlan(plan_id);
-                                    cloudPlans.get(count).setDone(true);
+                                    //其他信息不一致，返回云端信息，一致就删掉
+                                    if(p.getContent().equals(content)&&p.getDate().equals(date)&&p.getLink().equals(link)){
+                                        cloudPlans.remove(p);
+                                    }else{
+                                        p.setDone(true);
+                                    }
                                 }
-                                break;
                             }
+                            break;
                         }
                     }
 

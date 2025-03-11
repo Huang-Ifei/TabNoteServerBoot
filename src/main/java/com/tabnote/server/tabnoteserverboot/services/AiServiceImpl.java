@@ -31,9 +31,8 @@ import java.util.Random;
 import static com.tabnote.server.tabnoteserverboot.define.AiList.*;
 
 @Service
-public class AiService implements AiServiceInterface {
+public class AiServiceImpl implements AiServiceInterface {
     AiMapper aiMapper;
-    AiRequestCounter aiRequestCounter;
     AccountMapper accountMapper;
     VipMapper vipMapper;
 
@@ -45,11 +44,6 @@ public class AiService implements AiServiceInterface {
     @Autowired
     public void setAiMapper(AiMapper aiMapper) {
         this.aiMapper = aiMapper;
-    }
-
-    @Autowired
-    public void setAiRequestCounter(AiRequestCounter aiRequestCounter) {
-        this.aiRequestCounter = aiRequestCounter;
     }
 
     @Autowired
@@ -74,12 +68,23 @@ public class AiService implements AiServiceInterface {
             requestJson.put("model", modelList[1]);
         } else if (model.equals("o1-mini")) {
             requestJson.put("model", modelList[2]);
+        } else if (model.equals(modelList[3])) {
+            requestJson.put("model", modelList[3]);
+        } else if (model.equals(modelList[4])) {
+            requestJson.put("model", modelList[4]);
         }
 
-        requestJson.put("stream", true);
-        JSONObject usageUpJson = new JSONObject();
-        usageUpJson.put("include_usage", true);
-        requestJson.put("stream_options", usageUpJson);
+        if(model.equals(modelList[3])||model.equals(modelList[4])){
+            //deepseek流式传输+使用显示
+            requestJson.put("stream", true);
+            requestJson.put("include_usage", true);
+        }else{
+            //chatgpt流式传输使用显示
+            requestJson.put("stream", true);
+            JSONObject usageUpJson = new JSONObject();
+            usageUpJson.put("include_usage", true);
+            requestJson.put("stream_options", usageUpJson);
+        }
         requestJson.putArray("messages");
         JSONArray contents = requestJson.getJSONArray("messages");
 
@@ -90,6 +95,7 @@ public class AiService implements AiServiceInterface {
             contents.add(sysJson);
         }
 
+        //检查每一条信息并构建对话
         for (int i = 0; i < messages.size(); i++) {
             JSONObject message = messages.getJSONObject(i);
             JSONObject userJson = new JSONObject();
@@ -103,6 +109,185 @@ public class AiService implements AiServiceInterface {
             contents.add(userJson);
         }
         return requestJson;
+    }
+
+    @Override
+    public JSONArray buildBQImgRequestToJSONArray(JSONObject bodyJson, String type){
+        JSONArray userContent = new JSONArray();
+        JSONObject imgJSON = new JSONObject();
+        imgJSON.put("type", "image_url");
+
+        if (bodyJson.getString("text").length()>=30){
+            JSONObject imageUrlJson = new JSONObject();
+            imageUrlJson.put("url", bodyJson.getString("img"));
+            imgJSON.put("image_url", imageUrlJson);
+        }else{
+            JSONObject imageUrlJson = new JSONObject();
+            imageUrlJson.put("url", bodyJson.getString("imgHigh"));
+            imgJSON.put("image_url", imageUrlJson);
+        }
+
+        userContent.add(imgJSON);
+        JSONObject textJson = new JSONObject();
+        textJson.put("type", "text");
+        if(type.equals("solve")&&bodyJson.getString("text").length()>=30){
+            textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，如果是数学题目请您告诉我每一步的解题步骤，以下是我提前使用OCR对图片进行识别，读取出来的内容，供您参考校对，以免出现识别错误：" + bodyJson.getString("text"));
+        } else if (type.equals("solve")&&bodyJson.getString("text").length()<30) {
+            textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，如果是数学题目请您告诉我每一步的解题步骤");
+        } else if (type.equals("latex")&&bodyJson.getString("text").length()>=30) {
+            textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别为Latex格式或者直接将题目的题干给我，存在图片时请描述图片内容;以下是我先行使用OCR识别出来的结果，请根据图片内容进行修正（例如补充图片，公式，表格等内容）：" + bodyJson.getString("text"));
+        } else if (type.equals("latex")&&bodyJson.getString("text").length()<30) {
+            textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别为Latex格式或者直接将题目的题干给我");
+        }
+        userContent.add(textJson);
+        JSONObject roleJson = new JSONObject();
+        roleJson.put("role", "user");
+        roleJson.put("content", userContent);
+        JSONArray messages = new JSONArray();
+        messages.add(roleJson);
+        return messages;
+    }
+
+    @Override
+    public JSONArray buildO1Message(StringBuffer sb){
+        JSONArray o1Messages = new JSONArray();
+        JSONObject o1Message = new JSONObject();
+        o1Message.put("role", "user");
+        o1Message.put("content", "图中有一道或若干道题目，我已经通过GPT4o识别出来图中题目的题干，请根据识别出来的题干，告诉我它/它们的答案：" + sb.toString());
+        o1Messages.add(o1Message);
+        return o1Messages;
+    }
+
+    //抄送给DEEPSEEK API
+    @Override
+    public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
+        String url = "https://api.deepseek.com/chat/completions";
+
+        if(requestJson.getString("model").equals(modelList[4])){
+            url = "https://api.siliconflow.cn/v1/chat/completions";
+        }
+
+        URL uRL = new URL(url);
+        HttpURLConnection connection;
+        OutputStream os;
+        InputStream is;
+        BufferedReader br;
+        connection = (HttpURLConnection) uRL.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setConnectTimeout(8000);
+        connection.setReadTimeout(180000);
+        connection.setDoOutput(true);
+        connection.setDoInput(true);
+        connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+
+        if(requestJson.getString("model").equals(modelList[3])){
+            connection.setRequestProperty("Authorization", "Bearer " + DEEPSEEK_API_KEY);
+        }else if(requestJson.getString("model").equals(modelList[4])){
+            connection.setRequestProperty("Authorization", "Bearer " + siliconFlowDeepSeek_API_KEY);
+        }
+        os = connection.getOutputStream();
+        System.out.println("request to deepseek" + requestJson.toString());
+        os.write(requestJson.toString().getBytes(StandardCharsets.UTF_8));
+        os.flush();
+        os.close();
+        if (connection.getResponseCode() == 200) {
+            if (response != null){
+                response.addHeader("content-type", "application/json;charset=utf-8");
+            }
+
+            is = connection.getInputStream();
+            if (null != is) {
+                int quotaCost = 0;
+                br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+                String temp;
+                while (null != (temp = br.readLine())) {
+                    if (!temp.equals("\n") && !temp.isEmpty()) {
+                        if (temp.equals("[DONE]")||temp.equals("data: [DONE]")) {
+                            break;
+                        }
+                        JSONObject returnJSON = new JSONObject();
+                        JSONObject returnMessage = new JSONObject();
+
+                        JSONObject tempJSON;
+
+                        if (temp.startsWith("data: ")){
+                            StringBuffer responseJSON = new StringBuffer();
+                            //不解析"data: "
+                            for (int i = 5; i < temp.length(); i++) {
+                                responseJSON.append(temp.charAt(i));
+                            }
+                            tempJSON = JSONObject.parseObject(responseJSON.toString());
+                        }else{
+                            tempJSON = JSONObject.parseObject(temp);
+                        }
+                        if (tempJSON != null) {
+                            try {
+                                JSONArray choices = tempJSON.getJSONArray("choices");
+                                //如果choices是空的，那么这就是最后一个计数条计算quota
+                                if (choices.isEmpty()) {
+                                    quotaCost = countQuota(tempJSON, requestJson);
+                                } else {
+                                    //找到回报的信息
+                                    String returnMess = choices.getJSONObject(0).getJSONObject("delta").getString("content");
+                                    String thinkingMess = choices.getJSONObject(0).getJSONObject("delta").getString("reasoning_content");
+                                    if (returnMess != null||thinkingMess != null) {
+                                        //封装
+                                        returnJSON.put("model", requestJson.getString("model"));
+                                        if (returnMess != null) {
+                                            returnMessage.put("content", returnMess);
+                                            //添加到string buffer里面
+                                            returnString.append(returnMess);
+                                        }
+                                        if (thinkingMess != null) {
+                                            returnMessage.put("reasoning_content", thinkingMess);
+                                        }
+                                        returnJSON.put("message", returnMessage);
+                                        //如果usage不等于null就可以计算quota了
+                                        quotaCost = countQuota(tempJSON, requestJson);
+                                        //把封装好的JSON送回
+                                        if (response != null) {
+                                            response.getWriter().write(returnJSON.toString());
+                                            response.getWriter().write("\n");
+                                            response.getWriter().flush();
+                                        }
+                                    }
+                                }
+                            } catch (NullPointerException e) {
+                                e.printStackTrace();
+                                break;
+                            }
+                        }
+                    }
+                }
+                //把封装好的JSON送回
+                if (response != null) {
+                    response.getWriter().write("{\"response\":\"success\"}");
+                    response.getWriter().write("\n");
+                    response.getWriter().flush();
+                }
+                br.close();
+                return quotaCost;
+            }
+        } else {
+            returnString.delete(0, returnString.length());
+            System.out.println("err:" + connection.getResponseCode());
+
+            BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
+            System.out.println(new String(bis.readAllBytes()));
+
+            JSONObject returnJSON = new JSONObject();
+            JSONObject returnMessage = new JSONObject();
+
+            returnMessage.put("content", "failed" + connection.getResponseCode());
+            returnJSON.put("model", requestJson.getString("model"));
+            returnJSON.put("message", returnMessage);
+            if (response != null) {
+                response.getWriter().write(returnJSON.toString());
+                response.getWriter().write("\n");
+                response.getWriter().flush();
+            }
+        }
+        return 0;
     }
 
     //抄送给ChatGPT API
@@ -129,7 +314,7 @@ public class AiService implements AiServiceInterface {
         os.close();
         if (connection.getResponseCode() == 200) {
             if (response != null){
-                response.addHeader("content-type", "text/html;charset=utf-8");
+                response.addHeader("content-type", "application/json;charset=utf-8");
             }
 
             is = connection.getInputStream();
@@ -224,6 +409,10 @@ public class AiService implements AiServiceInterface {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 4;
             } else if (requestJson.getString("model").equals(modelList[2])) {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 20 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 80;
+            } else if (requestJson.getString("model").equals(modelList[3])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 4+ tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 15;
+            } else if (requestJson.getString("model").equals(modelList[4])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 4+ tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 15;
             }
         }
         return quotaCost;
@@ -459,7 +648,7 @@ public class AiService implements AiServiceInterface {
             //构建请求
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI("https://www.daxuesoutijiang.com/dxtools/pc/picsearch"))
-                    .header("Cookie", "DXUSS=BGAIFUwSksvNT-Z0M64W91e8a6xeHWmwZUDJ-FnVwUndmeGOmpUfLXORiYaqFeMQ")
+                    .header("Cookie", "DXUSS=BGsIEk8YlcXJSeZ0M64W91e8a6xw4Hu-ZUDJ-NeztUiKlvbahrURM0GY99GOc-Ey")
                     .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                     .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                     .build();

@@ -2,7 +2,7 @@ package com.tabnote.server.tabnoteserverboot.config;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.MQMessages;
-import com.tabnote.server.tabnoteserverboot.services.AiService;
+import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.annotation.PostConstruct;
 import org.springframework.amqp.core.ReturnedMessage;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
@@ -32,10 +32,10 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
         this.mqMessages = mqMessages;
     }
 
-    private AiService aiService;
+    private AiServiceInterface aiService;
 
     @Autowired
-    public void setAiService(AiService aiService) {
+    public void setAiService(AiServiceInterface aiService) {
         this.aiService = aiService;
     }
 
