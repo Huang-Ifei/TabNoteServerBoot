@@ -4,6 +4,7 @@ import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
 import com.tabnote.server.tabnoteserverboot.models.Vip;
 import org.apache.ibatis.annotations.*;
 
+import java.util.HashMap;
 import java.util.List;
 
 @Mapper
@@ -38,5 +39,10 @@ public interface VipMapper {
     //进行修改
     @Update("update vip set `quota`=`quota`-#{quota} where vip_id=#{vip_id}")
     void useQuota(@Param("quota")int quota,@Param("vip_id")String vip_id);
+    @Insert("insert into consumption_history VALUES (#{ch_id},#{usr_id},current_time,#{quota},'')")
+    void insertUseHis(@Param("ch_id")String ch_id,@Param("usr_id")String usr_id,@Param("quota")int quota);
+
+    @Select("select * from consumption_history where usr_id=#{usr_id} order by date_time desc limit 200")
+    List<HashMap<String,Object>> selectConsumptionHistory(@Param("usr_id")String usr_id);
 
 }

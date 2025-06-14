@@ -99,6 +99,13 @@ public class AccountController {
             return sendErr();
         }
     }
+    @PostMapping("/ch")
+    public ResponseEntity<String> chController(@RequestBody String requestBody, HttpServletRequest request) throws Exception {
+        JSONObject jsonObject = JSONObject.parseObject(requestBody);
+        String id = jsonObject.getString("id");
+        String token = jsonObject.getString("token");
+        return sendMes(accountService.getCHList(id,token));
+    }
 
     private ResponseEntity<String> sendErr() {
         return ResponseEntity.badRequest().body("err");

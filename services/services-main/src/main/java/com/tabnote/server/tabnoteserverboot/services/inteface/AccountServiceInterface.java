@@ -25,4 +25,6 @@ public interface AccountServiceInterface {
     JSONObject resetPassword(JSONObject jsonObject);
 
     JSONObject getTokensById(String id,String token);
+
+    JSONObject getCHList(String id, String token);
 }

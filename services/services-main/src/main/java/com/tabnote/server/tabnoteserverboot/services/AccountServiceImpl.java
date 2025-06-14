@@ -1,10 +1,12 @@
 package com.tabnote.server.tabnoteserverboot.services;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.Cryptic;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ResetIdMapper;
+import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AccountServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,11 @@ public class AccountServiceImpl implements AccountServiceInterface {
     @Autowired
     public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tie) {
         this.tabNoteInfiniteEncryption = tie;
+    }
+    VipMapper vipMapper;
+    @Autowired
+    public void setVipMapper(VipMapper vipMapper) {
+        this.vipMapper = vipMapper;
     }
 
     //账号查重
@@ -291,6 +298,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
                 resetIdMapper.updateBQId(id,new_id);
                 resetIdMapper.updateVIPId(id,new_id);
                 resetIdMapper.updateLCId(id,new_id);
+                resetIdMapper.updateCHId(id,new_id);
 
                 File accountImg = new File("accountImg/"+id+".jpg");
                 if (accountImg.exists()){
@@ -355,6 +363,27 @@ public class AccountServiceImpl implements AccountServiceInterface {
             json.put("response","success");
         }catch (Exception e){
             json.put("response","数据错误");
+            e.printStackTrace();
+        }
+        return json;
+    }
+
+    @Override
+    public JSONObject getCHList(String id, String token){
+        JSONObject json = new JSONObject();
+        JSONArray arrayList = json.putArray("list");
+        try {
+            if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
+                json.put("response","登录状态确认失败");
+                return json;
+            }
+            List<HashMap<String, Object>> hashMaps = vipMapper.selectConsumptionHistory(id);
+            hashMaps.forEach(hashMap ->
+                arrayList.add(JSONObject.from(hashMap))
+            );
+            json.put("response","success");
+        }catch (Exception e){
+            json.put("response","error");
             e.printStackTrace();
         }
         return json;

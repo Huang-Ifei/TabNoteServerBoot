@@ -13,7 +13,7 @@ public interface AiMapper {
     @Update("UPDATE ai_messages SET contents=#{contents} ,date_time=#{date_time} WHERE ai_ms_id=#{ai_ms_id}")
     void changeAiMessages(@Param("contents") String contents, @Param("date_time") String date_time, @Param("ai_ms_id") String ai_ms_id);
 
-    @Select("SELECT ai_ms_id,mainly,date_time FROM ai_messages WHERE usr_id=#{usr_id} ORDER BY date_time DESC")
+    @Select("SELECT ai_ms_id,mainly,date_time FROM ai_messages WHERE usr_id=#{usr_id} ORDER BY date_time DESC LIMIT 500")
     List<AiMessagesForList> getUsrAiList(@Param("usr_id") String usr_id);
 
     @Select("SELECT * FROM ai_messages WHERE ai_ms_id=#{ai_ms_id}")
@@ -38,8 +38,8 @@ public interface AiMapper {
             "VALUES (#{bq_id}, #{usr_id}, current_timestamp , #{img}, #{text}, #{ai_answer}, #{dxstj})")
     void insertBQ(BQ beatQuestion);
 
-    @Delete("DELETE FROM beat_questions WHERE text=#{text} ORDER BY date_time DESC LIMIT 1")
-    void deleteBQByText(@Param("text") String text);
+    @Delete("DELETE FROM beat_questions WHERE text=#{text} and usr_id=#{usrId} ORDER BY date_time DESC LIMIT 1")
+    void deleteBQByText(@Param("usrId") String usrId,@Param("text") String text);
 
     @Select("SELECT bq_id,date_time,img FROM beat_questions WHERE usr_id = #{usrId} ORDER BY date_time DESC LIMIT 10 OFFSET #{index}")
     List<BQForList> getBQListByUserId(@Param("usrId") String usrId, @Param("index") int index);

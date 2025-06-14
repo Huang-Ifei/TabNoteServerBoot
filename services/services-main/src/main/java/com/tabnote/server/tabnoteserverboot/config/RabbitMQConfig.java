@@ -50,15 +50,17 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
     @Override
     public void confirm(CorrelationData correlationData, boolean ack, String cause) {
         //这是发送到交换机成功或失败的时候调用这个方法
-        System.out.println("发送是否成功: " + ack);
-        System.out.println("原因: " + cause);
         String id = correlationData.getId().toString();
-        System.out.println("message id：" + id);
+        System.out.println("发送是否成功: " + ack);
+
         if (ack) {
             //发送成功
             mqMessages.removeMessage(id);
             System.out.println("删除暂存的已发送至交换机信息:" + id);
         } else {
+            System.out.println("原因: " + cause);
+            System.out.println("message id：" + id);
+
             String ms = mqMessages.getMessage(id);
 
             if (ms != null && mqMessages.getTryTime(id) < 2) {
@@ -67,6 +69,7 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
                     rabbitTemplate.convertAndSend(EXCHANGE_BACKUP, ROUTING_BACKUP, ms, new CorrelationData(id));
                 }
             } else if (ms != null && mqMessages.getTryTime(id) >= 2) {
+                System.out.println("多次尝试写入备份交换机依旧失效");
                 //备份交换机失败尝试直接写入
                 if (mqMessages.getAimExchange(id).equals(EXCHANGE_DIRECT)) {
                     JSONObject json = JSONObject.parseObject(ms);
@@ -80,6 +83,7 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
     @Override
     public void returnedMessage(ReturnedMessage returnedMessage) {
         //这是发送到队列失败的时候调用的方法
+        System.out.println("发送到队列失败");
         System.out.println("应答码: " + returnedMessage.getReplyCode());
         System.out.println("描述：" + returnedMessage.getReplyText());
         System.out.println("使用的交换机：" + returnedMessage.getExchange());
@@ -95,6 +99,7 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
             rabbitTemplate.convertAndSend(EXCHANGE_BACKUP, ROUTING_BACKUP, message, new CorrelationData(uuid.toString()));
         } else if (returnedMessage.getExchange().equals(EXCHANGE_BACKUP)) {
             //如果发送到备份队列依旧失败尝试直接写入
+            System.out.println("写入备份队列依旧失效");
             JSONObject json = JSONObject.parseObject(message);
             aiService.useQuota(json.getInteger("quota"), json.getString("user_id"));
         }

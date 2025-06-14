@@ -3,6 +3,7 @@ package com.tabnote.server.tabnoteserverboot.services;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
+import com.tabnote.server.tabnoteserverboot.component.TabNoteMixGateway;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
@@ -27,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 import static com.tabnote.server.tabnoteserverboot.define.AiInfo.*;
 
@@ -58,6 +60,13 @@ public class AiServiceImpl implements AiServiceInterface {
         this.tabNoteInfiniteEncryption = tie;
     }
 
+    TabNoteMixGateway tabNoteMixGateway;
+
+    @Autowired
+    public void setTabNoteMixGateway(TabNoteMixGateway tabNoteMixGateway) {
+        this.tabNoteMixGateway = tabNoteMixGateway;
+    }
+
     //将请求JSON变为向ChatGPT API发送的JSON
     @Override
     public JSONObject buildChatGPTRequestJSON(JSONArray messages, String model) {
@@ -72,13 +81,24 @@ public class AiServiceImpl implements AiServiceInterface {
             requestJson.put("model", modelList[3]);
         } else if (model.equals(modelList[4])) {
             requestJson.put("model", modelList[4]);
+        } else if (model.equals(modelList[7])) {
+            requestJson.put("model", modelList[7]);
+        } else if (model.equals(modelList[8])) {
+            requestJson.put("model", modelList[8]);
+        } else if (model.equals(modelList[9])) {
+            requestJson.put("model", modelList[9]);
+        } else if (model.equals(modelList[10])) {
+            requestJson.put("model", modelList[10]);
+        } else {
+            System.out.println("异常的模型："+model);
+            requestJson.put("model", model);
         }
 
-        if(model.equals(modelList[3])||model.equals(modelList[4])){
+        if (model.equals(modelList[3]) || model.equals(modelList[4]) || model.equals(modelList[7])) {
             //deepseek流式传输+使用显示
             requestJson.put("stream", true);
             requestJson.put("include_usage", true);
-        }else{
+        } else {
             //chatgpt流式传输使用显示
             requestJson.put("stream", true);
             JSONObject usageUpJson = new JSONObject();
@@ -87,12 +107,12 @@ public class AiServiceImpl implements AiServiceInterface {
         }
         requestJson.putArray("messages");
         JSONArray contents = requestJson.getJSONArray("messages");
-        if(model.equals(modelList[3])||model.equals(modelList[4])){
+        if (model.equals(modelList[3]) || model.equals(modelList[4])) {
             JSONObject sysJson = new JSONObject();
             sysJson.put("role", "system");
             sysJson.put("content", "You are a helpful assistant!您的第一语言设定为中文!思维链（思考部分）要简洁！不要反复确认！最多反思确认一次！");
             contents.add(sysJson);
-        } else if (!model.equals("o1-mini")) {
+        } else if (!model.equals("o1-mini") || !model.equals(modelList[10])) {
             JSONObject sysJson = new JSONObject();
             sysJson.put("role", "system");
             sysJson.put("content", "You are a helpful assistant!您的第一语言设定为中文。");
@@ -116,16 +136,16 @@ public class AiServiceImpl implements AiServiceInterface {
     }
 
     @Override
-    public JSONArray buildBQImgRequestToJSONArray(JSONObject bodyJson, String type){
+    public JSONArray buildBQImgRequestToJSONArray(JSONObject bodyJson, String type) {
         JSONArray userContent = new JSONArray();
         JSONObject imgJSON = new JSONObject();
         imgJSON.put("type", "image_url");
 
-        if (bodyJson.getString("text").length()>=30){
+        if (bodyJson.getString("text").length() >= 30) {
             JSONObject imageUrlJson = new JSONObject();
             imageUrlJson.put("url", bodyJson.getString("img"));
             imgJSON.put("image_url", imageUrlJson);
-        }else{
+        } else {
             JSONObject imageUrlJson = new JSONObject();
             imageUrlJson.put("url", bodyJson.getString("imgHigh"));
             imgJSON.put("image_url", imageUrlJson);
@@ -134,14 +154,14 @@ public class AiServiceImpl implements AiServiceInterface {
         userContent.add(imgJSON);
         JSONObject textJson = new JSONObject();
         textJson.put("type", "text");
-        if(type.equals("solve")&&bodyJson.getString("text").length()>=30){
+        if (type.equals("solve") && bodyJson.getString("text").length() >= 30) {
             textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，如果是数学题目请您告诉我每一步的解题步骤，以下是我提前使用OCR对图片进行识别出来的内容，供您参考校对，以免出现识别错误：" + bodyJson.getString("text"));
-        } else if (type.equals("solve")&&bodyJson.getString("text").length()<30) {
+        } else if (type.equals("solve") && bodyJson.getString("text").length() < 30) {
             textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，如果是数学题目请您告诉我每一步的解题步骤");
-        } else if (type.equals("latex")&&bodyJson.getString("text").length()>=30) {
-            textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别为Latex格式或者直接将题目的题干给我，存在图片时请描述图片内容;以下是我先行使用OCR识别出来的结果，请根据图片内容进行修正（例如补充图片，公式，表格等内容，以及对乱码错误内容进行修正，对无关信息进行删减）：" + bodyJson.getString("text"));
-        } else if (type.equals("latex")&&bodyJson.getString("text").length()<30) {
-            textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别为Latex格式或者直接将题目的题干给我");
+        } else if (type.equals("latex") && bodyJson.getString("text").length() >= 30) {
+            textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别出来（如果是选择题需要包括每一个选项），存在图片时请描述图片内容;以下是我先行使用OCR识别出来的结果，请根据图片内容进行修正（例如补充图片，公式，表格等内容，以及对乱码错误内容进行修正，对无关信息进行删减）：" + bodyJson.getString("text") + "\n\n注意：不要反馈你的想法，不要重复我的话，不需要多余的形容词，直接将题干和选项（如果有）告诉我");
+        } else if (type.equals("latex") && bodyJson.getString("text").length() < 30) {
+            textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别出来（如果是选择题需要包括每一个选项），不需要多余的形容词，直接将题干和选项（如果有）告诉我");
         }
         userContent.add(textJson);
         JSONObject roleJson = new JSONObject();
@@ -153,11 +173,11 @@ public class AiServiceImpl implements AiServiceInterface {
     }
 
     @Override
-    public JSONArray buildO1Message(StringBuffer sb){
+    public JSONArray buildO1Message(StringBuffer sb) {
         JSONArray o1Messages = new JSONArray();
         JSONObject o1Message = new JSONObject();
         o1Message.put("role", "user");
-        o1Message.put("content", "图中有一道或若干道题目，我已经通过GPT4o识别出来图中题目的题干，请根据识别出来的题干，告诉我它/它们的答案：" + sb.toString());
+        o1Message.put("content", "图中有一道或若干道题目，我已经通过识图工具识别出来图中题目的题干，请根据识别出来的题干，告诉我答案（思维链部分请务必不要一直反复思考，尽快生成答案）题目如下：" + sb.toString());
         o1Messages.add(o1Message);
         return o1Messages;
     }
@@ -167,8 +187,13 @@ public class AiServiceImpl implements AiServiceInterface {
     public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
         String url = "https://api.deepseek.com/chat/completions";
 
-        if(requestJson.getString("model").equals(modelList[4])||requestJson.getString("model").equals(modelList[7])){
+        if (requestJson.getString("model").equals(modelList[4]) || requestJson.getString("model").equals(modelList[7])) {
             url = "https://api.siliconflow.cn/v1/chat/completions";
+        }
+
+        String gateWayUrl = tabNoteMixGateway.getGateWayHost();
+        if (!gateWayUrl.isEmpty()) {
+            url = gateWayUrl + "/api_get";
         }
 
         URL uRL = new URL(url);
@@ -184,9 +209,9 @@ public class AiServiceImpl implements AiServiceInterface {
         connection.setDoInput(true);
         connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
 
-        if(requestJson.getString("model").equals(modelList[3])){
+        if (requestJson.getString("model").equals(modelList[3])) {
             connection.setRequestProperty("Authorization", "Bearer " + DEEPSEEK_API_KEY);
-        }else if(requestJson.getString("model").equals(modelList[4])){
+        } else if (requestJson.getString("model").equals(modelList[4])) {
             connection.setRequestProperty("Authorization", "Bearer " + siliconFlowDeepSeek_API_KEY);
         }
         os = connection.getOutputStream();
@@ -195,7 +220,7 @@ public class AiServiceImpl implements AiServiceInterface {
         os.flush();
         os.close();
         if (connection.getResponseCode() == 200) {
-            if (response != null){
+            if (response != null) {
                 response.addHeader("content-type", "application/json;charset=utf-8");
             }
 
@@ -206,7 +231,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 String temp;
                 while (null != (temp = br.readLine())) {
                     if (!temp.equals("\n") && !temp.isEmpty()) {
-                        if (temp.equals("[DONE]")||temp.equals("data: [DONE]")) {
+                        if (temp.equals("[DONE]") || temp.equals("data: [DONE]")) {
                             break;
                         }
                         JSONObject returnJSON = new JSONObject();
@@ -214,14 +239,14 @@ public class AiServiceImpl implements AiServiceInterface {
 
                         JSONObject tempJSON;
 
-                        if (temp.startsWith("data: ")){
+                        if (temp.startsWith("data: ")) {
                             StringBuffer responseJSON = new StringBuffer();
                             //不解析"data: "
                             for (int i = 5; i < temp.length(); i++) {
                                 responseJSON.append(temp.charAt(i));
                             }
                             tempJSON = JSONObject.parseObject(responseJSON.toString());
-                        }else{
+                        } else {
                             tempJSON = JSONObject.parseObject(temp);
                         }
                         if (tempJSON != null) {
@@ -234,7 +259,7 @@ public class AiServiceImpl implements AiServiceInterface {
                                     //找到回报的信息
                                     String returnMess = choices.getJSONObject(0).getJSONObject("delta").getString("content");
                                     String thinkingMess = choices.getJSONObject(0).getJSONObject("delta").getString("reasoning_content");
-                                    if (returnMess != null||thinkingMess != null) {
+                                    if (returnMess != null || thinkingMess != null) {
                                         //封装
                                         returnJSON.put("model", requestJson.getString("model"));
                                         if (returnMess != null) {
@@ -298,12 +323,21 @@ public class AiServiceImpl implements AiServiceInterface {
     @Override
     public int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
+        String gateWayUrl = tabNoteMixGateway.getGateWayHost();
+        if (!gateWayUrl.isEmpty()) {
+            url = gateWayUrl + "/api_get";
+        }
+
         URL uRL = new URL(url);
         HttpURLConnection connection;
         OutputStream os;
         InputStream is;
         BufferedReader br;
-        connection = (HttpURLConnection) uRL.openConnection(proxy);
+        if (!gateWayUrl.isEmpty()) {
+            connection = (HttpURLConnection) uRL.openConnection();
+        } else {
+            connection = (HttpURLConnection) uRL.openConnection(proxy);
+        }
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(8000);
         connection.setReadTimeout(180000);
@@ -317,7 +351,7 @@ public class AiServiceImpl implements AiServiceInterface {
         os.flush();
         os.close();
         if (connection.getResponseCode() == 200) {
-            if (response != null){
+            if (response != null) {
                 response.addHeader("content-type", "application/json;charset=utf-8");
             }
 
@@ -414,13 +448,21 @@ public class AiServiceImpl implements AiServiceInterface {
             } else if (requestJson.getString("model").equals(modelList[2])) {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 20 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 80;
             } else if (requestJson.getString("model").equals(modelList[3])) {
-                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 4+ tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 15;
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 4 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 15;
             } else if (requestJson.getString("model").equals(modelList[4])) {
-                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 4+ tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 15;
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 4 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 15;
             } else if (requestJson.getString("model").equals(modelList[5])) {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 20 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 80;
             } else if (requestJson.getString("model").equals(modelList[6])) {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 120 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 180;
+            } else if (requestJson.getString("model").equals(modelList[7])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 4;
+            } else if (requestJson.getString("model").equals(modelList[8])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 18 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 70;
+            } else if (requestJson.getString("model").equals(modelList[9])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens")  + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 4;
+            } else if (requestJson.getString("model").equals(modelList[10])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 20 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 80;
             }
         }
         return quotaCost;
@@ -434,11 +476,15 @@ public class AiServiceImpl implements AiServiceInterface {
         String mainly = "";
         JSONObject contents = new JSONObject();
 
-        String firstContent = JSONObject.parseObject(messages.get(0).toString()).getString("content");
-        if (firstContent.startsWith("[")) {
-            //JSONObject.parseObject(messages.get(0).toString()).getJSONArray("content").getJSONObject(1).getString("text");
-            mainly = JSONObject.parseObject(messages.get(1).toString()).getString("content");
-        } else if (firstContent.length() < 20) {
+        String firstContent = dateTime+"的对话";
+        for(int i=0;i<messages.size();i++){
+            firstContent = JSONObject.parseObject(messages.get(i).toString()).getString("content");
+            if (!firstContent.startsWith("[")){
+                break;
+            }
+        }
+
+        if (firstContent.length() < 20) {
             mainly = firstContent;
         } else {
             mainly = firstContent.substring(0, 18);
@@ -526,7 +572,8 @@ public class AiServiceImpl implements AiServiceInterface {
     }
 
     @Override
-    public JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String usrId, String note_content) {
+    public JSONObject noteAiSync(String note_ai_id, String note, JSONArray note_ticks, String token, String
+            usrId, String note_content) {
         JSONObject returnJSON = new JSONObject();
         try {
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usrId, token)) {
@@ -788,23 +835,24 @@ public class AiServiceImpl implements AiServiceInterface {
     }
 
     @Override
-    public boolean returnVector(HttpServletResponse response, String bqId, String text,StringBuffer answer) {
-        try{
+    public boolean returnVector(HttpServletResponse response, String bqId, String text, StringBuffer answer) {
+        try {
             BQ bq = aiMapper.getBQOnlyById(bqId);
-            if(bq==null){
+            if (bq == null) {
                 return false;
             }
             answer.append(bq.getAi_answer());
-            returnVectorHitMess(response,bq.getAi_answer(),text,bq.getText());
+            returnVectorHitMess(response, bq.getAi_answer(), text, bq.getText());
             return true;
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
 
     @Override
-    public void returnVectorHitMess(HttpServletResponse response, String s,String text,String vector_hit_text) throws IOException {
+    public void returnVectorHitMess(HttpServletResponse response, String s, String text, String vector_hit_text) throws
+            IOException {
         JSONObject returnJSON = new JSONObject();
         JSONObject returnMessage = new JSONObject();
         returnJSON.put("model", "vector_cache");
@@ -822,24 +870,26 @@ public class AiServiceImpl implements AiServiceInterface {
     }
 
     @Override
-    public void returnErrMess(HttpServletResponse response, String e)throws Exception{
+    public void returnErrMess(HttpServletResponse response, String e) throws Exception {
         String errMess = e;
-        errMess = errMess.replaceAll("Server returned HTTP response code: 400 for URL: https://api.openai.com/v1/chat/completions","连接AI服务提供商时出错，请稍后重试");
+        errMess = errMess.replaceAll("Server returned HTTP response code: 400 for URL: https://api.openai.com/v1/chat/completions", "连接AI服务提供商时出错，请稍后重试");
         errMess = errMess.replaceAll("openai", "AI服务提供商");
         errMess = errMess.replaceAll("chatgpt", "AI服务");
         errMess = errMess.replaceAll("chatGPT", "AI服务");
-        errMess = errMess.replaceAll("https://api.openai.com/v1/chat/completions","AI服务提供商");
+        errMess = errMess.replaceAll("https://api.openai.com/v1/chat/completions", "AI服务提供商");
 
         this.returnAdminMess(response, "failed,服务器内部错误：" + errMess);
     }
 
     @Transactional
     @Override
-    public void useQuota(int quotaCost, String id){
-        try{
+    public void useQuota(int quotaCost, String id) {
+        try {
             //使用for update悲观锁
             String vip_id = vipMapper.selectVipIdByUserId(id);
-            vipMapper.useQuota(quotaCost,vip_id);
+            vipMapper.useQuota(quotaCost, vip_id);
+            UUID uuid = UUID.randomUUID();
+            vipMapper.insertUseHis(uuid.toString(),id,quotaCost);
         } catch (Exception e) {
             throw e;
         }

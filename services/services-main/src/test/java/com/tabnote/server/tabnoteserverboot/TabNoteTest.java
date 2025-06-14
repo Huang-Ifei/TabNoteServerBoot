@@ -23,5 +23,7 @@ public class TabNoteTest {
 //        List<ServiceInstance> bertVectorCache = discoveryClient.getInstances("TabNoteServerMain");
 //        String url = bertVectorCache.get(0).getHost() + ":" +  bertVectorCache.get(0).getPort();
 //        System.out.println(url);
+//        System.out.println(discoveryClient.getServices().get(0));
+//        System.out.println(discoveryClient.getInstances(discoveryClient.getServices().get(0)).get(0).getHost());
     }
 }
