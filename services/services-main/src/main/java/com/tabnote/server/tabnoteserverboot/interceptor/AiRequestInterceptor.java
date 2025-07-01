@@ -5,6 +5,7 @@ import com.tabnote.server.tabnoteserverboot.component.SecurityComponent;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,6 +32,12 @@ public class AiRequestInterceptor implements HandlerInterceptor {
         this.securityComponent = securityComponent;
     }
 
+    private QuotaDeductionPublisher quotaDeductionPublisher;
+    @Autowired
+    public void setQuotaDeductionPublisher(QuotaDeductionPublisher quotaDeductionPublisher) {
+        this.quotaDeductionPublisher = quotaDeductionPublisher;
+    }
+
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -48,7 +55,8 @@ public class AiRequestInterceptor implements HandlerInterceptor {
         //check是否有此账户
         if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"), bodyJson.getString("token"))) {
             //没有授权的拒绝执行
-            RankAndQuota raq = vipMapper.selectRankByUserId(bodyJson.getString("id"));
+            RankAndQuota raq = quotaDeductionPublisher.getQuotaAndRank(bodyJson.getString("id"));
+
             if (raq == null || !raq.passAFABasic()) {
                 aiService.returnAdminMess(response, "你的账户没有高级功能授权或者额度已经用完，请访问：https://tabnote.cn/afa 获取授权，You need get AFA to request, please open: https://tabnote.cn/afa to get it.");
                 return false;

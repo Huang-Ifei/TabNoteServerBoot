@@ -2,10 +2,7 @@ package com.tabnote.server.tabnoteserverboot.controller;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.tabnote.server.tabnoteserverboot.component.OCR;
-import com.tabnote.server.tabnoteserverboot.component.SecurityComponent;
-import com.tabnote.server.tabnoteserverboot.component.TabNoteDefinitelyVectorCache;
-import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
+import com.tabnote.server.tabnoteserverboot.component.*;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
@@ -107,6 +104,11 @@ public class AiController {
     public void setTabNoteDefinitelyVectorCache(TabNoteDefinitelyVectorCache tabNoteDefinitelyVectorCache) {
         this.tabNoteDefinitelyVectorCache = tabNoteDefinitelyVectorCache;
     }
+    CDNAI cdnai;
+    @Autowired
+    public void setCDNAI(CDNAI cdnai) {
+        this.cdnai = cdnai;
+    }
 
 
     //笔记型AI的接口
@@ -123,8 +125,11 @@ public class AiController {
             JSONArray messages = bodyJson.getJSONArray("messages");
             JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model);
             StringBuffer sb = new StringBuffer();
+            String ca_id = aiService.newAndResponseCAID(response);
+            cdnai.newTACADS(ca_id);
+
             //抄送给API
-            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb);
+            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
             System.out.println(sb);
             response.getWriter().write("");
             response.getWriter().flush();
@@ -151,8 +156,10 @@ public class AiController {
             JSONArray messages = bodyJson.getJSONArray("messages");
             JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model);
             StringBuffer sb = new StringBuffer();
+            String ca_id = aiService.newAndResponseCAID(response);
+            cdnai.newTACADS(ca_id);
             //抄送给API
-            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb);
+            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
             System.out.println(sb);
             response.getWriter().write("");
             response.getWriter().flush();
@@ -173,10 +180,11 @@ public class AiController {
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject((String) request.getAttribute("body"));
-            RankAndQuota raq = vipMapper.selectRankByUserId(bodyJson.getString("id"));
+            RankAndQuota raq = quotaDeductionPublisher.getQuotaAndRank(bodyJson.getString("id"));
             //确定模型
             String model = bodyJson.getString("model");
-
+            String ca_id = aiService.newAndResponseCAID(response);
+            cdnai.newTACADS(ca_id);
             //初始化
             StringBuffer answer = new StringBuffer();
             String hitDataId = "";
@@ -193,17 +201,17 @@ public class AiController {
                     bodyJson.put("text", ocr.getOCR(bodyJson.getString("imgHigh")));
 
                     //将请求JSON变为向API发送的JSON（识别图片内容）
-                    JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[8]);
+                    JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[9]);
 
                     try {
-                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb);
+                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
                     } catch (Exception e) {
                         System.out.println("gpt-4o识别出错了");
                         e.printStackTrace();
                     }
                     //没成功重试一下
                     if (qC1 == 0 || sb.isEmpty()) {
-                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb);
+                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
                     }
                     System.out.println(sb);
                     bodyJson.put("text",sb.toString());
@@ -227,21 +235,13 @@ public class AiController {
                     //通过识别出来的内容构建O1格式的JSON
                     JSONArray rqArray = aiService.buildO1Message(sb);
                     int qC2 = 0;
-//                    //尝试原生API
-//                    try {
-//                        if (!sb.isEmpty()) {
-//                            System.out.println("DeepSeek原生API");
-//                            qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[3]), response, answer);
-//                        }
-//                    } catch (Exception e) {
-//                        e.printStackTrace();
-//                    }
+
                     //尝试硅基流动API
                     if (answer.isEmpty()) {
                         try {
                             if (!sb.isEmpty()) {
                                 System.out.println("使用Silicon DeepSeek API");
-                                qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4]), response, answer);
+                                qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4]), response, answer,ca_id);
                             }
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -251,62 +251,31 @@ public class AiController {
                     if (!answer.isEmpty() || qC2 != 0) {
                         System.out.println("扣费：gpt4o用于识别："+qC1+"；deepSeek用于解题："+qC2);
                         quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1 + qC2);
-                    }
-//                    else if (raq.passAFAPlus()&&!sb.isEmpty()) {
-//                        //如果有Plus高级授权并且有识别结果
-//                        int qC3 = 0;
-//                        try {
-//                            qC3 = aiService.postAiMessagesToChatGPTAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[2]), response, answer);
-//                        } catch (Exception e) {
-//                            e.printStackTrace();
-//                        }
-//                        //o1解题成功
-//                        if (!answer.isEmpty() || qC3 != 0) {
-//                            System.out.println("扣费：gpt4o用于识别："+qC1+"；o1mini用于解题："+qC3);
-//                            quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1 + qC3);
-//                        } else {
-//                            //如果有Plus高级授权并且以上操作都失效了直接使用gpt4o
-//                            JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[0]);
-//
-//                            //抄送给API
-//                            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer);
-//                            System.out.println(answer);
-//                            response.getWriter().write("");
-//                            response.getWriter().flush();
-//
-//                            quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
-//                        }
-//                    }
-                    else {
-                        //没有高级授权无法进行o1那么直接使用gpt4o
+                    } else {
                         JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8]);
 
                         //抄送给API
-                        int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer);
+                        int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer,ca_id);
                         System.out.println(answer);
                         response.getWriter().write("");
                         response.getWriter().flush();
                         System.out.println("扣费：gpt4o用于识别："+qC1+"（这一费用用户不承担）；gpt4o用于解题："+quotaCost);
                         quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
                     }
-
                 }
+            }
 
-                //基础的4o模型可以识别图片直接执行
-            } else if (model.equals("gpt-4o") || model.equals(modelList[0]) || model.equals(modelList[1])) {
+            //如果不是AAM、AM或者出现了超时未解答的问题，使用基础的4o/4.1模型可以识别图片直接执行
+            if (answer.isEmpty() && hitDataId.isEmpty()) {
                 //将请求JSON变为向API发送的JSON
                 JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8]);
 
                 //抄送给API
                 int quotaCost = 0;
                 try {
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer);
+                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer,ca_id);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer);
-                }
-                if (quotaCost == 0 || answer.isEmpty()) {
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer);
                 }
 
                 System.out.println(answer);
@@ -315,35 +284,6 @@ public class AiController {
 
                 System.out.println("扣费：仅GPT4o，gpt4o用于解题："+quotaCost);
                 quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
-
-                //O1-MINI工作流
-            } else if (model.equals(modelList[2])||model.equals(modelList[5])||model.equals(modelList[10])) {
-                if (!raq.passAFAPlus()) {
-                    aiService.returnAdminMess(response, "使用o4-mini GPT+工作流需要您至少获取高级授权,You need to get at least AFA+ to use the o1-mini GPT+ workflow.");
-                    return;
-                }
-                StringBuffer sb = new StringBuffer();
-
-                //将请求JSON变为向API发送的JSON
-                JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[0]);
-
-                int quotaCost = 0;
-                try {
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb);
-                }
-                if (quotaCost == 0 || sb.isEmpty()) {
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb);
-                }
-                System.out.println(sb);
-
-                //抄送给API
-                int quotaCost2 = aiService.postAiMessagesToChatGPTAPI(aiService.buildChatGPTRequestJSON(aiService.buildO1Message(sb), modelList[10]), response, answer);
-                System.out.println(answer);
-                System.out.println("扣费：gpt4o用于识别："+quotaCost+"；o1mini用于解题："+quotaCost2);
-                quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost + quotaCost2);
             }
 
             //加入历史
@@ -359,8 +299,9 @@ public class AiController {
             bq.setBq_id(BQID);
             aiService.insertBQWithOutTokenCheck(bq);
             response.getWriter().close();
-
-            tabNoteDefinitelyVectorCache.addToBQVectorCache(BQID, bodyJson.getString("text"));
+            if(!answer.isEmpty()){
+                tabNoteDefinitelyVectorCache.addToBQVectorCache(BQID, bodyJson.getString("text"));
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -378,6 +319,8 @@ public class AiController {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject((String) request.getAttribute("body"));
             System.out.println(bodyJson);
+            String ca_id = aiService.newAndResponseCAID(response);
+            cdnai.newTACADS(ca_id);
             //确定模型
             String model = bodyJson.getString("model");
             //将请求JSON变为向API发送的JSON
@@ -385,7 +328,7 @@ public class AiController {
             JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model);
             StringBuffer sb = new StringBuffer();
             //抄送给API
-            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb);
+            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
             System.out.println(sb);
             response.getWriter().write("");
             response.getWriter().flush();
@@ -399,7 +342,7 @@ public class AiController {
                     messageJson.put("role", "assistant");
                     messageJson.put("content", sb.toString());
                     messages.add(messageJson);
-                    response.getWriter().write(aiService.createMessages(messages, bodyJson.getString("id"), tabNoteInfiniteEncryption.proxyGetIp(request)));
+                    response.getWriter().write(aiService.createMessages(messages, bodyJson.getString("id"), tabNoteInfiniteEncryption.proxyGetIp(request),ca_id));
                     response.getWriter().flush();
                 } else {
                     JSONObject messageJson = new JSONObject();

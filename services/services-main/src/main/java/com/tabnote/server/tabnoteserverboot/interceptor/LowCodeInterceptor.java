@@ -5,6 +5,7 @@ import com.tabnote.server.tabnoteserverboot.component.SecurityComponent;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,12 +20,14 @@ public class LowCodeInterceptor implements HandlerInterceptor {
     private final TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
     private final VipMapper vipMapper;
     private final AiServiceInterface aiService;
+    private final QuotaDeductionPublisher quotaDeductionPublisher;
 
     @Autowired
-    public LowCodeInterceptor(TabNoteInfiniteEncryption tabNoteInfiniteEncryption, VipMapper vipMapper, AiServiceInterface aiService) {
+    public LowCodeInterceptor(TabNoteInfiniteEncryption tabNoteInfiniteEncryption, VipMapper vipMapper, AiServiceInterface aiService,QuotaDeductionPublisher quotaDeductionPublisher) {
         this.tabNoteInfiniteEncryption = tabNoteInfiniteEncryption;
         this.vipMapper = vipMapper;
         this.aiService = aiService;
+        this.quotaDeductionPublisher = quotaDeductionPublisher;
     }
 
     @Override
@@ -35,7 +38,7 @@ public class LowCodeInterceptor implements HandlerInterceptor {
         String body = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
         if (body.isEmpty()) {
             return false;
-        }else {
+        } else {
             request.setAttribute("body", body);
         }
         //变成JSON对象
@@ -43,13 +46,13 @@ public class LowCodeInterceptor implements HandlerInterceptor {
         //check是否有此账户
         if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"), bodyJson.getString("token"))) {
             //没有授权的拒绝执行
-            RankAndQuota raq = vipMapper.selectRankByUserId(bodyJson.getString("id"));
+            RankAndQuota raq = quotaDeductionPublisher.getQuotaAndRank(bodyJson.getString("id"));
             if (raq == null || !raq.passAFABasic()) {
                 aiService.returnAdminMess(response, "你的账户没有高级功能授权或者额度已经用完，请访问：https://tabnote.cn/afa 获取授权，You need get AFA to request, please open: https://tabnote.cn/afa to get it.");
                 return false;
             }
             return true;
-        }else {
+        } else {
             aiService.returnAdminMess(response, "您的账户验证出现错误，请重新尝试或者重新登录,account check failed please request again or try login again.");
             return false;
         }

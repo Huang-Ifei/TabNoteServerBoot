@@ -17,13 +17,15 @@ public interface AiServiceInterface {
 
     JSONArray buildO1Message(StringBuffer sb);
 
-    //抄送给ChatGPT API
-    int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
+    //抄送给DS API
+    int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String cdn_ai_ms) throws Exception;
 
     //抄送给API
-    int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception;
+    int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String cdn_ai_ms) throws Exception;
 
-    String createMessages(JSONArray messages, String id, String ip);
+    void write(String s, String ca_id, HttpServletResponse response);
+
+    String createMessages(JSONArray messages, String id, String ip,String cdn_ai_id);
 
     void changeMessages(JSONArray messages, String aiMsId);
 
@@ -55,6 +57,7 @@ public interface AiServiceInterface {
 
     void returnErrMess(HttpServletResponse response, String e)throws Exception;
 
-    @Transactional
-    void useQuota(int quotaCost, String id);
+    void useQuota(int quotaCost, String id,String idempotence_id);
+
+    String newAndResponseCAID(HttpServletResponse response) throws Exception;
 }

@@ -2,6 +2,7 @@ package com.tabnote.server.tabnoteserverboot.services;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.CDNAI;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteMixGateway;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
@@ -11,6 +12,7 @@ import com.tabnote.server.tabnoteserverboot.models.*;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -65,6 +68,11 @@ public class AiServiceImpl implements AiServiceInterface {
     @Autowired
     public void setTabNoteMixGateway(TabNoteMixGateway tabNoteMixGateway) {
         this.tabNoteMixGateway = tabNoteMixGateway;
+    }
+    CDNAI cdnai;
+    @Autowired
+    public void setCDNAI(CDNAI cdnai) {
+        this.cdnai = cdnai;
     }
 
     //将请求JSON变为向ChatGPT API发送的JSON
@@ -154,13 +162,13 @@ public class AiServiceImpl implements AiServiceInterface {
         userContent.add(imgJSON);
         JSONObject textJson = new JSONObject();
         textJson.put("type", "text");
-        if (type.equals("solve") && bodyJson.getString("text").length() >= 30) {
-            textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，如果是数学题目请您告诉我每一步的解题步骤，以下是我提前使用OCR对图片进行识别出来的内容，供您参考校对，以免出现识别错误：" + bodyJson.getString("text"));
-        } else if (type.equals("solve") && bodyJson.getString("text").length() < 30) {
-            textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，如果是数学题目请您告诉我每一步的解题步骤");
-        } else if (type.equals("latex") && bodyJson.getString("text").length() >= 30) {
+        if (type.equals("solve") && bodyJson.getString("text").length() >= 15) {
+            textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，解题时请您告诉我每一步的解题步骤，详细的生成每一步的操作，以下是我提前使用OCR对图片进行识别出来的内容，供您参考校对，以免出现识别错误：" + bodyJson.getString("text")+ "（如果OCR识别正确或者错误都请你不要重复OCR识别内容正确或者错误，也不要告诉我有几道题目，生成的内容你只需要关注于解答就行）");
+        } else if (type.equals("solve") && bodyJson.getString("text").length() < 15) {
+            textJson.put("text", "图中有一道或若干道题目，请你告诉我它/它们的答案，解题时请您告诉我每一步的解题步骤，详细的生成每一步的操作");
+        } else if (type.equals("latex") && bodyJson.getString("text").length() >= 15) {
             textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别出来（如果是选择题需要包括每一个选项），存在图片时请描述图片内容;以下是我先行使用OCR识别出来的结果，请根据图片内容进行修正（例如补充图片，公式，表格等内容，以及对乱码错误内容进行修正，对无关信息进行删减）：" + bodyJson.getString("text") + "\n\n注意：不要反馈你的想法，不要重复我的话，不需要多余的形容词，直接将题干和选项（如果有）告诉我");
-        } else if (type.equals("latex") && bodyJson.getString("text").length() < 30) {
+        } else if (type.equals("latex") && bodyJson.getString("text").length() < 15) {
             textJson.put("text", "图中有一道或若干道题目，请将其题目题干识别出来（如果是选择题需要包括每一个选项），不需要多余的形容词，直接将题干和选项（如果有）告诉我");
         }
         userContent.add(textJson);
@@ -177,14 +185,14 @@ public class AiServiceImpl implements AiServiceInterface {
         JSONArray o1Messages = new JSONArray();
         JSONObject o1Message = new JSONObject();
         o1Message.put("role", "user");
-        o1Message.put("content", "图中有一道或若干道题目，我已经通过识图工具识别出来图中题目的题干，请根据识别出来的题干，告诉我答案（思维链部分请务必不要一直反复思考，尽快生成答案）题目如下：" + sb.toString());
+        o1Message.put("content", "图中有一道或若干道题目，我已经通过识图工具识别出来图中题目的题干，请根据识别出来的题干，告诉我答案(不要重复生成题干)，题目如下：" + sb.toString());
         o1Messages.add(o1Message);
         return o1Messages;
     }
 
     //抄送给DEEPSEEK API
     @Override
-    public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
+    public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String ca_id) throws Exception {
         String url = "https://api.deepseek.com/chat/completions";
 
         if (requestJson.getString("model").equals(modelList[4]) || requestJson.getString("model").equals(modelList[7])) {
@@ -204,7 +212,7 @@ public class AiServiceImpl implements AiServiceInterface {
         connection = (HttpURLConnection) uRL.openConnection();
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(8000);
-        connection.setReadTimeout(180000);
+        connection.setReadTimeout(300000);
         connection.setDoOutput(true);
         connection.setDoInput(true);
         connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
@@ -238,7 +246,6 @@ public class AiServiceImpl implements AiServiceInterface {
                         JSONObject returnMessage = new JSONObject();
 
                         JSONObject tempJSON;
-
                         if (temp.startsWith("data: ")) {
                             StringBuffer responseJSON = new StringBuffer();
                             //不解析"data: "
@@ -275,9 +282,7 @@ public class AiServiceImpl implements AiServiceInterface {
                                         quotaCost = countQuota(tempJSON, requestJson);
                                         //把封装好的JSON送回
                                         if (response != null) {
-                                            response.getWriter().write(returnJSON.toString());
-                                            response.getWriter().write("\n");
-                                            response.getWriter().flush();
+                                            write(returnJSON.toString(),ca_id,response);
                                         }
                                     }
                                 }
@@ -290,9 +295,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 }
                 //把封装好的JSON送回
                 if (response != null) {
-                    response.getWriter().write("{\"response\":\"success\"}");
-                    response.getWriter().write("\n");
-                    response.getWriter().flush();
+                    write("{\"response\":\"success\"}",ca_id,response);
                 }
                 br.close();
                 return quotaCost;
@@ -311,9 +314,7 @@ public class AiServiceImpl implements AiServiceInterface {
             returnJSON.put("model", requestJson.getString("model"));
             returnJSON.put("message", returnMessage);
             if (response != null) {
-                response.getWriter().write(returnJSON.toString());
-                response.getWriter().write("\n");
-                response.getWriter().flush();
+                write(requestJson.toString(),ca_id,response);
             }
         }
         return 0;
@@ -321,7 +322,7 @@ public class AiServiceImpl implements AiServiceInterface {
 
     //抄送给ChatGPT API
     @Override
-    public int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString) throws Exception {
+    public int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String ca_id) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
         String gateWayUrl = tabNoteMixGateway.getGateWayHost();
         if (!gateWayUrl.isEmpty()) {
@@ -362,18 +363,23 @@ public class AiServiceImpl implements AiServiceInterface {
                 String temp;
                 while (null != (temp = br.readLine())) {
                     if (!temp.equals("\n") && !temp.isEmpty()) {
-                        if (temp.equals("data: [DONE]")) {
+                        if (temp.equals("[DONE]") || temp.equals("data: [DONE]")) {
                             break;
-                        }
-                        StringBuffer responseJSON = new StringBuffer();
-                        //不解析"data:"
-                        for (int i = 5; i < temp.length(); i++) {
-                            responseJSON.append(temp.charAt(i));
                         }
                         JSONObject returnJSON = new JSONObject();
                         JSONObject returnMessage = new JSONObject();
 
-                        JSONObject tempJSON = JSONObject.parseObject(responseJSON.toString());
+                        JSONObject tempJSON;
+                        if (temp.startsWith("data: ")) {
+                            StringBuffer responseJSON = new StringBuffer();
+                            //不解析"data: "
+                            for (int i = 5; i < temp.length(); i++) {
+                                responseJSON.append(temp.charAt(i));
+                            }
+                            tempJSON = JSONObject.parseObject(responseJSON.toString());
+                        } else {
+                            tempJSON = JSONObject.parseObject(temp);
+                        }
                         if (tempJSON != null) {
                             try {
                                 JSONArray choices = tempJSON.getJSONArray("choices");
@@ -394,9 +400,8 @@ public class AiServiceImpl implements AiServiceInterface {
                                         quotaCost = countQuota(tempJSON, requestJson);
                                         //把封装好的JSON送回
                                         if (response != null) {
-                                            response.getWriter().write(returnJSON.toString());
-                                            response.getWriter().write("\n");
-                                            response.getWriter().flush();
+                                            write(returnJSON.toString(),ca_id,response);
+
                                         }
                                     }
                                 }
@@ -409,9 +414,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 }
                 //把封装好的JSON送回
                 if (response != null) {
-                    response.getWriter().write("{\"response\":\"success\"}");
-                    response.getWriter().write("\n");
-                    response.getWriter().flush();
+                    write("{\"response\":\"success\"}",ca_id,response);
                 }
                 br.close();
                 return quotaCost;
@@ -430,15 +433,26 @@ public class AiServiceImpl implements AiServiceInterface {
             returnJSON.put("model", requestJson.getString("model"));
             returnJSON.put("message", returnMessage);
             if (response != null) {
-                response.getWriter().write(returnJSON.toString());
-                response.getWriter().write("\n");
-                response.getWriter().flush();
+                write(requestJson.toString(),ca_id,response);
             }
         }
         return 0;
     }
 
-    public int countQuota(JSONObject tempJSON, JSONObject requestJson) {
+    @Override
+    public void write(String s, String ca_id, HttpServletResponse response){
+        try{
+            response.getWriter().write(s);
+            response.getWriter().write("\n");
+            response.getWriter().flush();
+        }catch(Exception e) {
+            e.printStackTrace();
+        }finally{
+            cdnai.sendToTACADS(ca_id,s);
+        }
+    }
+
+    private int countQuota(JSONObject tempJSON, JSONObject requestJson) {
         int quotaCost = 0;
         if (tempJSON.containsKey("usage") && tempJSON.get("usage") != null) {
             if (requestJson.getString("model").equals(modelList[0])) {
@@ -470,7 +484,7 @@ public class AiServiceImpl implements AiServiceInterface {
 
     //创建新的对话，返回一个ai ms id
     @Override
-    public String createMessages(JSONArray messages, String id, String ip) {
+    public String createMessages(JSONArray messages, String id, String ip,String ca_id) {
         String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String aiMsId = String.valueOf(messages.hashCode()) + String.valueOf(id.hashCode()) + String.valueOf(ip.hashCode());
         String mainly = "";
@@ -499,6 +513,7 @@ public class AiServiceImpl implements AiServiceInterface {
             e.printStackTrace();
             return "";
         }
+        write("{\"ai_ms_id\":\"" + aiMsId + "\"}",ca_id,null);
         return "{\"ai_ms_id\":\"" + aiMsId + "\"}";
     }
 
@@ -883,15 +898,24 @@ public class AiServiceImpl implements AiServiceInterface {
 
     @Transactional
     @Override
-    public void useQuota(int quotaCost, String id) {
+    public void useQuota(int quotaCost, String id,String idempotence_id) {
         try {
-            //使用for update悲观锁
             String vip_id = vipMapper.selectVipIdByUserId(id);
+            vipMapper.insertUseHis(idempotence_id,id,quotaCost);
             vipMapper.useQuota(quotaCost, vip_id);
-            UUID uuid = UUID.randomUUID();
-            vipMapper.insertUseHis(uuid.toString(),id,quotaCost);
         } catch (Exception e) {
             throw e;
         }
+    }
+
+    @Override
+    public String newAndResponseCAID(HttpServletResponse response) throws Exception{
+        String cdn_ai_id = UUID.randomUUID().toString();
+        JSONObject param = new JSONObject();
+        param.put("cdn_ai_id", cdn_ai_id);
+        response.getWriter().write(param.toString());
+        response.getWriter().write("\n");
+        response.getWriter().flush();
+        return cdn_ai_id;
     }
 }

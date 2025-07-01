@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.Vip;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.redis.VipAuth;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -35,11 +36,17 @@ public class VipController {
         this.vipAuth = vipAuth;
     }
 
+    QuotaDeductionPublisher quotaDeductionPublisher;
+    @Autowired
+    public void setQuotaDeductionPublisher(QuotaDeductionPublisher quotaDeductionPublisher) {
+        this.quotaDeductionPublisher = quotaDeductionPublisher;
+    }
+
     @GetMapping("rank")
     public ResponseEntity<String> publicKey(@RequestParam String id) {
         System.out.println("getVIP");
         JSONObject json = new JSONObject();
-        Integer getRank = vipMapper.selectRankByUserId(id).getRank();
+        Integer getRank = quotaDeductionPublisher.getQuotaAndRank(id).getRank();
         if (getRank == null) {
             json.put("rank", 0);
         } else {

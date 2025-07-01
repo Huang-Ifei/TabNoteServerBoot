@@ -2,6 +2,7 @@ package com.tabnote.server.tabnoteserverboot.redis;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -9,22 +10,22 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class VipAuth {
-    private RedisTemplate redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
     @Autowired
-    public void setRedisTemplate(RedisTemplate redisTemplate) {
+    public void setRedisTemplate(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
     public String setVipAuth(int rank) throws Exception {
         UUID uuid = UUID.randomUUID();
-        redisTemplate.opsForValue().set("vip:"+uuid.toString(), rank,7, TimeUnit.DAYS);
+        redisTemplate.opsForValue().set("vip:"+uuid.toString(), rank+"",7, TimeUnit.DAYS);
         return uuid.toString();
     }
 
     public int checkVipAuth(String auth) {
         try{
-            int rank = (int) redisTemplate.opsForValue().get("vip:"+auth);
+            int rank = Integer.parseInt(redisTemplate.opsForValue().get("vip:"+auth));
             return rank;
         }catch (Exception e){
             return 0;

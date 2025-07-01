@@ -73,7 +73,7 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
                 //备份交换机失败尝试直接写入
                 if (mqMessages.getAimExchange(id).equals(EXCHANGE_DIRECT)) {
                     JSONObject json = JSONObject.parseObject(ms);
-                    aiService.useQuota(json.getInteger("quota"), json.getString("user_id"));
+                    aiService.useQuota(json.getInteger("quota"), json.getString("user_id"),json.getString("idempotence_id"));
                     mqMessages.removeMessage(id);
                 }
             }
@@ -101,7 +101,7 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
             //如果发送到备份队列依旧失败尝试直接写入
             System.out.println("写入备份队列依旧失效");
             JSONObject json = JSONObject.parseObject(message);
-            aiService.useQuota(json.getInteger("quota"), json.getString("user_id"));
+            aiService.useQuota(json.getInteger("quota"), json.getString("user_id"),json.getString("idempotence_id"));
         }
     }
 }

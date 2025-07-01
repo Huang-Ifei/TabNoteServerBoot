@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
@@ -19,10 +20,10 @@ public class LikeCount {
         stopUseRedis = 0;
     }
 
-    private RedisTemplate redisTemplate;
+    private StringRedisTemplate redisTemplate;
 
     @Autowired
-    public void setRedisTemplate(RedisTemplate redisTemplate) {
+    public void setRedisTemplate(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
@@ -43,7 +44,7 @@ public class LikeCount {
                     return Integer.parseInt(o.toString());
                 } else {
                     Integer tabNoteLikeCount = tabNoteMapper.getTabNoteLikeCount(tabNoteId);
-                    redisTemplate.opsForValue().set("like:" + tabNoteId, tabNoteLikeCount, 100, TimeUnit.SECONDS);
+                    redisTemplate.opsForValue().set("like:" + tabNoteId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
                     return tabNoteLikeCount;
                 }
             } else {
@@ -68,7 +69,7 @@ public class LikeCount {
                 redisTemplate.expire("like:" + tabNoteId, 100, TimeUnit.SECONDS);
             }else{
                 Integer tabNoteLikeCount = tabNoteMapper.getTabNoteLikeCount(tabNoteId);
-                redisTemplate.opsForValue().set("like:" + tabNoteId, tabNoteLikeCount, 100, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set("like:" + tabNoteId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             e.printStackTrace();

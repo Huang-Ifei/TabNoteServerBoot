@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
@@ -20,9 +21,9 @@ public class MessLikeCount {
         stopUseRedis = 0;
     }
 
-    private RedisTemplate redisTemplate;
+    private StringRedisTemplate redisTemplate;
     @Autowired
-    public void setRedisTemplate(RedisTemplate redisTemplate) {
+    public void setRedisTemplate(StringRedisTemplate redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
@@ -42,7 +43,7 @@ public class MessLikeCount {
                     return Integer.parseInt(o.toString());
                 } else {
                     Integer tabNoteLikeCount = messageMapper.getTabMessLikeCount(tabMessId);
-                    redisTemplate.opsForValue().set("TMLike:" + tabMessId, tabNoteLikeCount, 100, TimeUnit.SECONDS);
+                    redisTemplate.opsForValue().set("TMLike:" + tabMessId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
                     return tabNoteLikeCount;
                 }
             } else {
@@ -67,7 +68,7 @@ public class MessLikeCount {
                 redisTemplate.expire("TMLike:" + tabMessId, 100, TimeUnit.SECONDS);
             }else{
                 Integer tabNoteLikeCount = messageMapper.getTabMessLikeCount(tabMessId);
-                redisTemplate.opsForValue().set("TMLike:" + tabMessId, tabNoteLikeCount, 100, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set("TMLike:" + tabMessId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -84,7 +85,7 @@ public class MessLikeCount {
                     return Integer.parseInt(o.toString());
                 } else {
                     Integer tabNoteLikeCount = messageMapper.getMessMessLikeCount(messMessId);
-                    redisTemplate.opsForValue().set("MMLike:" + messMessId, tabNoteLikeCount, 100, TimeUnit.SECONDS);
+                    redisTemplate.opsForValue().set("MMLike:" + messMessId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
                     return tabNoteLikeCount;
                 }
             } else {
@@ -109,7 +110,7 @@ public class MessLikeCount {
                 redisTemplate.expire("MMLike:" + messMessId, 100, TimeUnit.SECONDS);
             }else{
                 Integer tabNoteLikeCount = messageMapper.getMessMessLikeCount(messMessId);
-                redisTemplate.opsForValue().set("MMLike:" + messMessId, tabNoteLikeCount, 100, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set("MMLike:" + messMessId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             e.printStackTrace();

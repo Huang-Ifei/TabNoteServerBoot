@@ -11,6 +11,7 @@ import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
 import com.tabnote.server.tabnoteserverboot.models.TabNote;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.redis.LikeCount;
 import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
 import com.tabnote.server.tabnoteserverboot.services.inteface.TabNoteServiceInterface;
@@ -68,6 +69,12 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
     @Autowired
     public void setTagsListProcess(TagsListProcess tagsListProcess) {
         this.tagsListProcess = tagsListProcess;
+    }
+
+    QuotaDeductionPublisher quotaDeductionPublisher;
+    @Autowired
+    public void setQuotaDeductionPublisher(QuotaDeductionPublisher quotaDeductionPublisher) {
+        this.quotaDeductionPublisher = quotaDeductionPublisher;
     }
 
     //获取分类
@@ -289,7 +296,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         JSONObject returnJSON = new JSONObject();
         try {
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id, token)) {
-                RankAndQuota rankAndQuota = vipMapper.selectRankByUserId(usr_id);
+                RankAndQuota rankAndQuota = quotaDeductionPublisher.getQuotaAndRank(usr_id);
                 if (rankAndQuota == null || rankAndQuota.passAFAPP()) {
                     String date_time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
                     String tab_note_id = usr_id.hashCode() + "" + System.currentTimeMillis();

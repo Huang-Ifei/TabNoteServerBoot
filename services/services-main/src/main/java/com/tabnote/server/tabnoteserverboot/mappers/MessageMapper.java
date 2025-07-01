@@ -18,8 +18,10 @@ public interface MessageMapper {
     List<TabNoteMessage> getTabNoteMessages(@Param("0") String tab_note_id,@Param("start") int start);
     @Insert("insert into messages_messages (message_id, usr_id, ip_address, reply_message_id, message, date_time,from_tab_mess) VALUES (#{0},#{1},#{2},#{3},#{4},CURRENT_TIMESTAMP,#{5})")
     void insertMessageMessage(@Param("0") String message_id,@Param("1") String usr_id,@Param("2") String ip_address,@Param("3") String reply_message_id,@Param("4") String message,@Param("5") String from_tab_mess);
+
     @Select("select name from user where id=(select usr_id from messages_messages where message_id=#{0}) ")
     String getWhichReply(@Param("0")String reply_mess_id);
+
     @Select("select * from messages_messages where from_tab_mess=#{0} order by date_time desc limit 3 offset #{1}")
     List<MessageMessage> getMessageMessages(@Param("0") String from_tab_mess, @Param("1") Integer start);
     @Insert("insert into like_mess values (#{mm_id},#{u_id},CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE date_time = CURRENT_TIMESTAMP;")
