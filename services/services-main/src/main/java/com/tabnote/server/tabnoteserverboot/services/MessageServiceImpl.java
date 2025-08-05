@@ -8,14 +8,20 @@ import com.tabnote.server.tabnoteserverboot.models.MessageMessage;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteMessage;
 import com.tabnote.server.tabnoteserverboot.redis.MessLikeCount;
 import com.tabnote.server.tabnoteserverboot.services.inteface.MessageServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 public class MessageServiceImpl implements MessageServiceInterface {
+
+    private static final Logger log = LoggerFactory.getLogger(MessageServiceImpl.class);
     AccountMapper accountMapper;
     @Autowired
     public void setAccountMapper(AccountMapper accountMapper) {
@@ -39,6 +45,7 @@ public class MessageServiceImpl implements MessageServiceInterface {
         this.tabNoteInfiniteEncryption = tie;
     }
 
+    @Transactional(rollbackFor = Exception.class,isolation = Isolation.REPEATABLE_READ)
     @Override
     public JSONObject getTabNoteMessage(String tab_note_id, Integer start,String usr_id) {
         JSONObject jsonObject = new JSONObject();
@@ -60,7 +67,7 @@ public class MessageServiceImpl implements MessageServiceInterface {
             }
             jsonObject.put("response","success");
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -79,12 +86,13 @@ public class MessageServiceImpl implements MessageServiceInterface {
             }
 
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
     }
 
+    @Transactional(rollbackFor = Exception.class,isolation = Isolation.REPEATABLE_READ)
     @Override
     public JSONObject getMessageMessage(String from_tab_mess, Integer start,String usr_id) {
         JSONObject jsonObject = new JSONObject();
@@ -112,7 +120,7 @@ public class MessageServiceImpl implements MessageServiceInterface {
 
             jsonObject.put("response","success");
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -131,7 +139,7 @@ public class MessageServiceImpl implements MessageServiceInterface {
             }
 
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -150,7 +158,7 @@ public class MessageServiceImpl implements MessageServiceInterface {
             returnJSON.put("response", "click");
         } catch (Exception e) {
             returnJSON.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return returnJSON;
     }
@@ -168,7 +176,7 @@ public class MessageServiceImpl implements MessageServiceInterface {
             returnJSON.put("response", "click");
         } catch (Exception e) {
             returnJSON.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return returnJSON;
     }

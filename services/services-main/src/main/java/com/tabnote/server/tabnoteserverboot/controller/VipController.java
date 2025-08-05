@@ -6,6 +6,8 @@ import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.Vip;
 import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.redis.VipAuth;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,8 @@ import java.util.List;
 @Controller
 @RequestMapping("vip")
 public class VipController {
+
+    private static final Logger log = LoggerFactory.getLogger(VipController.class);
 
     VipMapper vipMapper;
 
@@ -44,7 +48,7 @@ public class VipController {
 
     @GetMapping("rank")
     public ResponseEntity<String> publicKey(@RequestParam String id) {
-        System.out.println("getVIP");
+        log.info("getVIP");
         JSONObject json = new JSONObject();
         Integer getRank = quotaDeductionPublisher.getQuotaAndRank(id).getRank();
         if (getRank == null) {
@@ -112,7 +116,7 @@ public class VipController {
             }
             json.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             json.put("response","failed");
         }
         return sendMes(json);

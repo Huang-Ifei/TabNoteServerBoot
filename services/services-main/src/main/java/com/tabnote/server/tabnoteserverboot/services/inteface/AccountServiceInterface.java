@@ -3,11 +3,11 @@ package com.tabnote.server.tabnoteserverboot.services.inteface;
 import com.alibaba.fastjson2.JSONObject;
 
 public interface AccountServiceInterface {
-    //查重
+
     JSONObject idCheck(String id);
-    //查重
+
     JSONObject passwordCheck(String password);
-    //查重
+
     JSONObject nameCheck(String name);
 
     JSONObject login(String id, String password, String address);

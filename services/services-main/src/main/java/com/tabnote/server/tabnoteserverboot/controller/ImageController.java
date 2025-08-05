@@ -4,6 +4,8 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
@@ -24,6 +26,7 @@ import java.nio.file.Path;
 @CrossOrigin
 @Controller
 public class ImageController {
+    private static final Logger log = LoggerFactory.getLogger(ImageController.class);
 
     private ResponseEntity<String> sendErr() {
         return ResponseEntity.badRequest().body("err");
@@ -41,38 +44,38 @@ public class ImageController {
 
     @GetMapping("/tabNoteImg")
     public ResponseEntity<byte[]> getTabNoteImg(@RequestParam String name) throws Exception {
-        System.out.println("tabNoteImg");
+        log.info("tabNoteImg");
         byte[] bytes;
         try {
             bytes = Files.readAllBytes(Path.of("tabNoteImgs/" + name + ".jpg"));
             return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
         } catch (Exception e) {
             bytes = new byte[0];
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
     }
 
     @PostMapping("/insertTabNoteImg")
     public ResponseEntity<String> insertTabNoteImg(@RequestBody String body) throws Exception {
-        System.out.println("insert tabNoteImg");
+        log.info("insert tabNoteImg");
         try {
             JSONObject json = JSONObject.parseObject(body);
             return ResponseEntity.ok().body(fileService.insertImgWithOutIdCheck(json.getString("img")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return ResponseEntity.ok().body("failed");
         }
     }
 
     @PostMapping("/upload_tab_note_img")
     public ResponseEntity<String> uploadImg(HttpServletRequest request) {
-        System.out.println("upload_tb_img");
+        log.info("upload_tb_img");
         try{
 
             MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
 
-            System.out.println(multipartRequest.getMultiFileMap().toSingleValueMap().values().toArray().length);
+            log.info(""+multipartRequest.getMultiFileMap().toSingleValueMap().values().toArray().length);
 
             MultipartFile file = multipartRequest.getFile(multipartRequest.getFileNames().next());
 
@@ -81,7 +84,7 @@ public class ImageController {
             }
             return sendMes(fileService.saveImg(file));
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
@@ -111,13 +114,13 @@ public class ImageController {
             try {
                 bytes = Files.readAllBytes(Path.of("accountImg/basic.jpg"));
             } catch (IOException ex) {
-                e.printStackTrace();
+                log.error(e.getMessage());
                 bytes = new byte[0];
             }
         }
         catch (Exception e){
             bytes = new byte[0];
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
     }
@@ -131,12 +134,12 @@ public class ImageController {
             try {
                 bytes = Files.readAllBytes(Path.of("usrImg/basic.jpg"));
             } catch (IOException ex) {
-                e.printStackTrace();
+                log.error(e.getMessage());
                 bytes = new byte[0];
             }
         } catch (Exception e) {
             bytes = new byte[0];
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes);
     }

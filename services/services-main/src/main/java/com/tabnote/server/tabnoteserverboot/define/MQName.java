@@ -8,4 +8,8 @@ public interface MQName {
     String EXCHANGE_BACKUP = "exchange.tabnote.backup.quota";
     String ROUTING_BACKUP = "key.tabnote.backup.quota";
     String QUEUE_BACKUP = "queue.tabnote.backup.quota";
+
+    String EXCHANGE_DEAD = "exchange.tabnote.dead.quota";
+    String ROUTING_DEAD = "key.tabnote.dead.quota";
+    String QUEUE_DEAD = "queue.tabnote.dead.quota";
 }

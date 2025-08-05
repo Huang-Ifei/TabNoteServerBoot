@@ -4,6 +4,8 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.services.inteface.TabNoteServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -14,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin
 @Controller
 public class TabNoteController {
+
+    private static final Logger log = LoggerFactory.getLogger(TabNoteController.class);
 
     TabNoteServiceInterface tabNoteService;
 
@@ -30,30 +34,30 @@ public class TabNoteController {
 
     @GetMapping("getClasses")
     public ResponseEntity<String> getClasses(HttpServletRequest request) {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "get_classes");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "get_classes");
         try {
             return sendMes(tabNoteService.getClasses());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
 
     @PostMapping("tags")
     public ResponseEntity<String> getTags(HttpServletRequest request, @RequestBody String body) {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "get_tags");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "get_tags");
         try {
             JSONObject jsonObject = JSONObject.parseObject(body);
             return sendMes(tabNoteService.tagsRecommended(jsonObject.getString("usr_id")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
 
     @PostMapping("tab_note_add")
     public ResponseEntity<String> addTabNote(@RequestBody String requestBody, HttpServletRequest request) {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "add_tab_note");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "add_tab_note");
         if (requestBody.length() > 10 * 1024 * 1024) {
             return sendErr();
         }
@@ -67,19 +71,19 @@ public class TabNoteController {
             }
             return sendMes(tabNoteService.insertTabNote(jsonObject.getString("token"), jsonObject.getString("id"), tabNoteInfiniteEncryption.proxyGetIp(request), jsonObject.getString("class_name"), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"), jsonObject.getString("file"), jsonObject.getJSONArray("pics"), jsonObject.getInteger("display")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
 
     @PostMapping("tab_note_update")
     public ResponseEntity<String> updateTabNote(@RequestBody String requestBody, HttpServletRequest request) {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_update");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_update");
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             return sendMes(tabNoteService.updateTabNote(jsonObject.getString("tab_note_id"), tabNoteInfiniteEncryption.proxyGetIp(request), jsonObject.getString("tab_note_name"), jsonObject.getString("tags"), jsonObject.getString("tab_note"), jsonObject.getString("date_time")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
@@ -90,51 +94,51 @@ public class TabNoteController {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
 
             if (jsonObject.containsKey("key_word") && !jsonObject.getString("key_word").isEmpty() && jsonObject.containsKey("class_name") && !jsonObject.getString("class_name").isEmpty()) {
-                System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page k c");
+                log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page k c");
                 return sendMes(tabNoteService.searchTabNoteWithCls(jsonObject.getString("class_name"), jsonObject.getString("key_word"), jsonObject.getInteger("page")));
             } else if (jsonObject.containsKey("class_name") && !jsonObject.getString("class_name").isEmpty()) {
-                System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page c");
+                log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page c");
                 return sendMes(tabNoteService.searchTabNoteByClass(jsonObject.getString("class_name"), jsonObject.getInteger("page")));
             } else if (jsonObject.containsKey("key_word") && !jsonObject.getString("key_word").isEmpty()) {
-                System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page k");
+                log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page k");
                 return sendMes(tabNoteService.searchTabNote(jsonObject.getString("key_word"), jsonObject.getInteger("page")));
             } else if (jsonObject.containsKey("id") && !jsonObject.getString("id").isEmpty()) {
-                System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page id");
+                log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page id");
                 return sendMes(tabNoteService.searchTabNoteById(jsonObject.getString("id"), jsonObject.getInteger("page")));
             } else if (jsonObject.containsKey("page")) {
-                System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page common");
+                log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_page common");
                 return sendMes(tabNoteService.getPageTabNotes(jsonObject.getInteger("page")));
             } else {
                 return sendErr();
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
 
     @PostMapping("tab_note")
     public ResponseEntity<String> getTabNote(@RequestBody String body, HttpServletRequest request) {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note");
         try {
             JSONObject jsonObject = JSONObject.parseObject(body);
 
             return sendMes(tabNoteService.getTabNote(jsonObject.getString("tabNoteId"), jsonObject.getString("id"), jsonObject.getString("token")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
 
     @PostMapping("tab_note_like")
     public ResponseEntity<String> likeTabNote(@RequestBody String requestBody, HttpServletRequest request) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_like");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "tab_note_like");
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             return sendMes(tabNoteService.likeTabNote(jsonObject.getString("tab_note_id"), jsonObject.getString("id"), jsonObject.getString("token")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }

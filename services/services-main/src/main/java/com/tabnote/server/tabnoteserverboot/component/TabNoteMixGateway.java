@@ -1,5 +1,7 @@
 package com.tabnote.server.tabnoteserverboot.component;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -10,6 +12,9 @@ import java.util.List;
 
 @Component
 public class TabNoteMixGateway {
+    
+    private static Logger log = LoggerFactory.getLogger(TabNoteMixGateway.class);
+    
     DiscoveryClient discoveryClient;
     @Autowired
     public TabNoteMixGateway(DiscoveryClient discoveryClient) {
@@ -26,8 +31,8 @@ public class TabNoteMixGateway {
             List<ServiceInstance> apiCheckMicroService = discoveryClient.getInstances("TabNote_Mix_Gateway");
             url = "http://" + apiCheckMicroService.get(0).getHost() + ":" + apiCheckMicroService.get(0).getPort();
         } catch (Exception e) {
-            System.out.println("网关获取错误");
-            e.printStackTrace();
+            log.error("网关获取错误");
+            log.error(e.getMessage());
         }
         return url;
     }

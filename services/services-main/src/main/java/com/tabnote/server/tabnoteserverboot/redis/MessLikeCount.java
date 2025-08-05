@@ -3,6 +3,8 @@ package com.tabnote.server.tabnoteserverboot.redis;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.MessageMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -15,7 +17,9 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class MessLikeCount {
 
-    private long stopUseRedis;
+    private static final Logger log = LoggerFactory.getLogger(MessLikeCount.class);
+
+    private volatile long stopUseRedis;
 
     public MessLikeCount() {
         stopUseRedis = 0;
@@ -39,7 +43,7 @@ public class MessLikeCount {
             if (System.currentTimeMillis() - stopUseRedis > 100000) {
                 o = redisTemplate.opsForValue().get("TMLike:" + tabMessId);
                 if (o != null) {
-                    System.out.println(tabMessId + "'s TM like count boot:" + o);
+                    log.info(tabMessId + "'s TM like count boot:" + o);
                     return Integer.parseInt(o.toString());
                 } else {
                     Integer tabNoteLikeCount = messageMapper.getTabMessLikeCount(tabMessId);
@@ -47,15 +51,15 @@ public class MessLikeCount {
                     return tabNoteLikeCount;
                 }
             } else {
-                System.out.println("redis use be banned");
+                log.error("redis use be banned");
                 return messageMapper.getTabMessLikeCount(tabMessId);
             }
         } catch (QueryTimeoutException | RedisConnectionFailureException e) {
-            System.out.println("Redis stop use in next 100 seconds,because:connect time out,redis maybe in chaos");
+            log.error("Redis stop use in next 100 seconds,because:connect time out,redis maybe in chaos");
             stopUseRedis = System.currentTimeMillis();
             return messageMapper.getTabMessLikeCount(tabMessId);
         } catch (Exception e) {
-            System.out.println(e);
+            log.error(e.getMessage());
             return messageMapper.getTabMessLikeCount(tabMessId);
         }
     }
@@ -71,7 +75,7 @@ public class MessLikeCount {
                 redisTemplate.opsForValue().set("TMLike:" + tabMessId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
 
@@ -81,7 +85,7 @@ public class MessLikeCount {
             if (System.currentTimeMillis() - stopUseRedis > 100000) {
                 o = redisTemplate.opsForValue().get("MMLike:" + messMessId);
                 if (o != null) {
-                    System.out.println(messMessId + "'s MM like count boot:" + o);
+                    log.info(messMessId + "'s MM like count boot:" + o);
                     return Integer.parseInt(o.toString());
                 } else {
                     Integer tabNoteLikeCount = messageMapper.getMessMessLikeCount(messMessId);
@@ -89,15 +93,15 @@ public class MessLikeCount {
                     return tabNoteLikeCount;
                 }
             } else {
-                System.out.println("redis use be banned");
+                log.error("redis use be banned");
                 return messageMapper.getMessMessLikeCount(messMessId);
             }
         } catch (QueryTimeoutException | RedisConnectionFailureException e) {
-            System.out.println("Redis stop use in next 100 seconds,because:connect time out,redis maybe in chaos");
+            log.error("Redis stop use in next 100 seconds,because:connect time out,redis maybe in chaos");
             stopUseRedis = System.currentTimeMillis();
             return messageMapper.getMessMessLikeCount(messMessId);
         } catch (Exception e) {
-            System.out.println(e);
+            log.error(e.getMessage());
             return messageMapper.getMessMessLikeCount(messMessId);
         }
     }
@@ -113,7 +117,7 @@ public class MessLikeCount {
                 redisTemplate.opsForValue().set("MMLike:" + messMessId, tabNoteLikeCount+"", 100, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
 

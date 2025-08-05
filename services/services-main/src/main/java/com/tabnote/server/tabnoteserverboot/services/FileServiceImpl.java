@@ -2,6 +2,8 @@ package com.tabnote.server.tabnoteserverboot.services;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +21,8 @@ import java.util.Base64;
 @Service
 public class FileServiceImpl implements FileServiceInterface {
 
+    private static final Logger log = LoggerFactory.getLogger(FileServiceImpl.class);
+
     @Override
     public JSONObject saveImg(MultipartFile file) {
         JSONObject res = new JSONObject();
@@ -32,14 +36,14 @@ public class FileServiceImpl implements FileServiceInterface {
             name = name.replace('?', '-');
             name = name.replace('=', '-');
             name = name.replace('&', '-');
-            System.out.println(name + "::" + Base64.getEncoder().encodeToString(hash));
+            log.info(name + "::" + Base64.getEncoder().encodeToString(hash));
             //压缩为JPG
             BufferedImage image = ImageIO.read(file.getInputStream());
             BufferedImage newImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
             newImage.createGraphics().drawImage(image, 0, 0, Color.WHITE, null);
             File localFile = new File("tabNoteImgs/" + name + ".jpg");
             if (!localFile.exists()) {
-                System.out.println("tabNoteImgs/" + name + ".jpg");
+                log.info("tabNoteImgs/" + name + ".jpg");
                 FileOutputStream fos = new FileOutputStream(localFile);
                 ImageIO.write(newImage, "jpg", fos);
                 fos.close();
@@ -50,7 +54,7 @@ public class FileServiceImpl implements FileServiceInterface {
             res.put("data", data);
         } catch (Exception e) {
             res.put("errno", 1);
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return res;
     }
@@ -73,7 +77,7 @@ public class FileServiceImpl implements FileServiceInterface {
                 bos.close();
                 return name;
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error(e.getMessage());
                 return name;
             }
         }
@@ -91,7 +95,7 @@ public class FileServiceImpl implements FileServiceInterface {
         try {
             bytes = Base64.getDecoder().decode(base64FileString);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return "failed";
         }
 
@@ -105,9 +109,9 @@ public class FileServiceImpl implements FileServiceInterface {
             name = name.replace('?', '-');
             name = name.replace('=', '-');
             name = name.replace('&', '-');
-            System.out.println(name + "::" + Base64.getEncoder().encodeToString(hash));
+            log.info(name + "::" + Base64.getEncoder().encodeToString(hash));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return "failed";
         }
 
@@ -159,7 +163,7 @@ public class FileServiceImpl implements FileServiceInterface {
                 writer.dispose();
 
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error(e.getMessage());
                 return "failed";
             }
         }
@@ -175,7 +179,7 @@ public class FileServiceImpl implements FileServiceInterface {
                 bos.close();
                 return name;
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error(e.getMessage());
                 return "failed";
             }
         }

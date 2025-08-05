@@ -2,6 +2,8 @@ package com.tabnote.server.tabnoteserverboot.component;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import com.tencentcloudapi.common.AbstractModel;
 
@@ -17,6 +19,9 @@ import static com.tabnote.server.tabnoteserverboot.define.AiInfo.secretKey;
 
 @Component
 public class OCR {
+
+    private static final Logger log = LoggerFactory.getLogger(OCR.class);
+
     public String getOCR(String address) {
         try{
             // 实例化一个认证对象，入参需要传入腾讯云账户 SecretId 和 SecretKey，此处还需注意密钥对的保密
@@ -47,11 +52,11 @@ public class OCR {
                 sb.append(text);
             }
 
-            System.out.println("OCR识别结果："+sb.toString());
+            log.info("OCR识别结果："+sb.toString());
 
             return sb.toString();
         } catch (TencentCloudSDKException e) {
-            System.out.println(e.toString());
+            log.error(e.getMessage());
             return "";
         }
     }

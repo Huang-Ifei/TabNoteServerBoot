@@ -34,8 +34,8 @@ public interface ResetIdMapper {
     void updateTabNoteId(@Param("oldId") String oldId, @Param("newId") String newId);
     @Update("update tab_notes_messages set usr_id=#{newId} where usr_id=#{oldId}")
     void updateMessagesId(@Param("oldId") String oldId, @Param("newId") String newId);
-    @Update("UPDATE tokens SET id = #{id} WHERE token = #{token};")
-    void updateToken(@Param("id") String id, @Param("token") String token);
+    @Update("UPDATE tokens SET id = #{id}  WHERE id =#{old_id};")
+    void updateToken(@Param("old_id") String old_id, @Param("id") String id);
     @Update("UPDATE user SET id = #{id}  WHERE id =#{old_id};")
     void resetID(@Param("old_id") String old_id, @Param("id") String id);
     @Update("UPDATE vip SET usr_id = #{newId} WHERE usr_id=#{oldId}")

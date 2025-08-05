@@ -7,6 +7,8 @@ import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.PlanMapper;
 import com.tabnote.server.tabnoteserverboot.models.Plan;
 import com.tabnote.server.tabnoteserverboot.services.inteface.PlanServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,8 @@ import java.util.List;
 
 @Service
 public class PlanServiceImpl implements PlanServiceInterface {
+
+    private static final Logger log = LoggerFactory.getLogger(PlanServiceImpl.class);
 
     AccountMapper accountMapper;
     PlanMapper planMapper;
@@ -41,14 +45,14 @@ public class PlanServiceImpl implements PlanServiceInterface {
         try{
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
                 List<Plan> maps = planMapper.getPlans(id);
-                System.out.println(maps.size());
+                log.info("计划列表大小："+maps.size());
                 for (Plan map : maps){
                     JSONObject note = new JSONObject();
                     note.put("plan_id", map.getPlan_id());
                     note.put("content", map.getContent());
                     note.put("link", map.getLink());
                     note.put("date", map.getDate());
-                    System.out.println(note);
+                    log.info(note.toString());
                     jsonObject.getJSONArray("plans").add(note);
                 }
                 jsonObject.put("response","success");
@@ -56,7 +60,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -75,7 +79,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                     note.put("content", map.getContent());
                     note.put("link", map.getLink());
                     note.put("date", map.getDate());
-                    System.out.println(note);
+                    log.info(note.toString());
                     jsonObject.getJSONArray("notes").add(note);
                 }
                 jsonObject.put("response","success");
@@ -83,7 +87,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -104,7 +108,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -123,7 +127,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -134,14 +138,14 @@ public class PlanServiceImpl implements PlanServiceInterface {
         JSONObject jsonObject = new JSONObject();
         try {
             if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(id,token)){
-                System.out.println(plan_id);
+                log.info(plan_id);
                 planMapper.resetPlan(plan_id,content,link,date);
                 jsonObject.put("response","success");
             }else {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -158,7 +162,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -175,7 +179,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -191,7 +195,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;
@@ -261,7 +265,7 @@ public class PlanServiceImpl implements PlanServiceInterface {
                 jsonObject.put("response","token_check_failed");
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response","failed");
         }
         return jsonObject;

@@ -1,6 +1,8 @@
 package com.tabnote.server.tabnoteserverboot.controller;
 
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class PublicKeyController {
 
+    private static final Logger log = LoggerFactory.getLogger(PublicKeyController.class);
+
     TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
     @Autowired
     public void setTabNoteInfiniteEncryption(TabNoteInfiniteEncryption tabNoteInfiniteEncryption) {
@@ -21,7 +25,7 @@ public class PublicKeyController {
 
     @GetMapping("public_key")
     public ResponseEntity<String> publicKey() {
-        System.out.println("publicKey");
+        log.info("publicKey");
         return sendMes(tabNoteInfiniteEncryption.getPublicKey());
     }
 

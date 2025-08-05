@@ -12,6 +12,8 @@ import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.http.MediaType;
@@ -31,6 +33,8 @@ import static com.tabnote.server.tabnoteserverboot.define.AiInfo.modelList;
 @Controller
 @RequestMapping("ai")
 public class AiController {
+
+    private static Logger log = LoggerFactory.getLogger(AiController.class);
 
     private AiServiceInterface aiService;
     @Autowired
@@ -114,7 +118,8 @@ public class AiController {
     //笔记型AI的接口
     @PostMapping("note")
     public void getNoteAiRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":note_ai");
+
+        log.info("{}:note_ai", tabNoteInfiniteEncryption.proxyGetIp(request));
 
         try {
             //变成JSON对象
@@ -130,13 +135,13 @@ public class AiController {
 
             //抄送给API
             int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
-            System.out.println(sb);
+            log.info("Note AI结果："+sb);
             response.getWriter().write("");
             response.getWriter().flush();
 
             quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             String errMess = e.toString();
             aiService.returnErrMess(response, errMess);
         }
@@ -146,7 +151,7 @@ public class AiController {
     //不进行数据库操作的gpt接口
     @PostMapping("gpt")
     public void sendChatGPTMesses(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":gpt");
+        log.info("{}:gpt", tabNoteInfiniteEncryption.proxyGetIp(request));
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject((String) request.getAttribute("body"));
@@ -160,13 +165,13 @@ public class AiController {
             cdnai.newTACADS(ca_id);
             //抄送给API
             int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
-            System.out.println(sb);
+            log.info("GPT AI结果："+sb);
             response.getWriter().write("");
             response.getWriter().flush();
 
             quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             String errMess = e.toString();
             aiService.returnErrMess(response, errMess);
         }
@@ -176,7 +181,7 @@ public class AiController {
     //bq接口
     @PostMapping("bq")
     public void sendBQMess(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":bq");
+        log.info("{}:bq", tabNoteInfiniteEncryption.proxyGetIp(request));
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject((String) request.getAttribute("body"));
@@ -192,7 +197,7 @@ public class AiController {
 
             //AAM以及AM工作流
             if (model.equals("AAM") || model.equals("AM")) {
-                System.out.println("执行" + model);
+                log.info("BQ执行:" + model);
                 StringBuffer sb = new StringBuffer();
                 //如果text为空那么就会进行识别，并且进行缓存查找，如果缓存被判定为命中，则返回缓存命中标准格式给客户端，如果不为空直接使用客户端发上来的text跳过识别部分
                 if (bodyJson.getString("text").isEmpty()) {
@@ -206,14 +211,14 @@ public class AiController {
                     try {
                         qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
                     } catch (Exception e) {
-                        System.out.println("gpt-4o识别出错了");
-                        e.printStackTrace();
+                        log.error("gpt-4o识别出错了!!");
+                        log.error(e.getMessage());
                     }
                     //没成功重试一下
                     if (qC1 == 0 || sb.isEmpty()) {
                         qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
                     }
-                    System.out.println(sb);
+                    log.info("BQ结果："+sb);
                     bodyJson.put("text",sb.toString());
                     hitDataId = tabNoteDefinitelyVectorCache.getBQVectorCache(bodyJson.getString("text"));
                 }else{
@@ -240,7 +245,7 @@ public class AiController {
                     if (answer.isEmpty()) {
                         try {
                             if (!sb.isEmpty()) {
-                                System.out.println("使用Silicon DeepSeek API");
+                                log.info("使用Silicon DeepSeek API");
                                 qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4]), response, answer,ca_id);
                             }
                         } catch (Exception ex) {
@@ -249,17 +254,17 @@ public class AiController {
                     }
                     //DeepSeek解题成功
                     if (!answer.isEmpty() || qC2 != 0) {
-                        System.out.println("扣费：gpt4o用于识别："+qC1+"；deepSeek用于解题："+qC2);
+                        log.info("扣费：gpt4o用于识别："+qC1+"；deepSeek用于解题："+qC2);
                         quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1 + qC2);
                     } else {
                         JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8]);
 
                         //抄送给API
                         int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer,ca_id);
-                        System.out.println(answer);
+                        log.info("BQ DeepSeek结题结果："+answer);
                         response.getWriter().write("");
                         response.getWriter().flush();
-                        System.out.println("扣费：gpt4o用于识别："+qC1+"（这一费用用户不承担）；gpt4o用于解题："+quotaCost);
+                        log.info("扣费：gpt4o用于识别："+qC1+"（这一费用用户不承担）；gpt4o用于解题："+quotaCost);
                         quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
                     }
                 }
@@ -267,6 +272,7 @@ public class AiController {
 
             //如果不是AAM、AM或者出现了超时未解答的问题，使用基础的4o/4.1模型可以识别图片直接执行
             if (answer.isEmpty() && hitDataId.isEmpty()) {
+                log.info("直接解题");
                 //将请求JSON变为向API发送的JSON
                 JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8]);
 
@@ -275,14 +281,14 @@ public class AiController {
                 try {
                     quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer,ca_id);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error(e.getMessage());
                 }
 
-                System.out.println(answer);
+                log.info("GPT4o直接解题结果："+answer);
                 response.getWriter().write("");
                 response.getWriter().flush();
 
-                System.out.println("扣费：仅GPT4o，gpt4o用于解题："+quotaCost);
+                log.info("扣费：仅GPT4o，gpt4o用于解题："+quotaCost);
                 quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
             }
 
@@ -304,7 +310,7 @@ public class AiController {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             String errMess = e.toString();
             aiService.returnErrMess(response, errMess);
         }
@@ -314,11 +320,11 @@ public class AiController {
     //AI对话接口
     @PostMapping("messages")
     public void sendMesses(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":Ai_Messages");
+        log.info("{}:Ai_Messages", tabNoteInfiniteEncryption.proxyGetIp(request));
         try {
             //变成JSON对象
             JSONObject bodyJson = JSONObject.parseObject((String) request.getAttribute("body"));
-            System.out.println(bodyJson);
+            log.info("messages接口收到JSON对象："+bodyJson);
             String ca_id = aiService.newAndResponseCAID(response);
             cdnai.newTACADS(ca_id);
             //确定模型
@@ -329,7 +335,7 @@ public class AiController {
             StringBuffer sb = new StringBuffer();
             //抄送给API
             int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
-            System.out.println(sb);
+            log.info("messages接口结果："+sb);
             response.getWriter().write("");
             response.getWriter().flush();
 
@@ -353,7 +359,7 @@ public class AiController {
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             aiService.returnErrMess(response, e.toString());
         }
         response.getWriter().close();
@@ -362,7 +368,7 @@ public class AiController {
     //大学搜题酱接口
     @PostMapping("dxstj")
     public ResponseEntity<String> getDXSTJ(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":dxstj");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":dxstj");
         JSONObject requestJson = JSONObject.parseObject(body);
 
         String id = requestJson.getString("id");
@@ -375,7 +381,7 @@ public class AiController {
     //对话AI的历史记录
     @PostMapping("get_history")
     public ResponseEntity<String> getAiHistory(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_ai_history");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_ai_history");
         JSONObject requestJson = JSONObject.parseObject(body);
 
         String id = requestJson.getString("id");
@@ -387,7 +393,7 @@ public class AiController {
     //获取某个对话的信息
     @PostMapping("history")
     public ResponseEntity<String> getAiHistoryMessages(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_history_ai_messages");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_history_ai_messages");
         JSONObject requestJson = JSONObject.parseObject(body);
         String ai_ms_id = requestJson.getString("ai_ms_id");
         String token = requestJson.getString("token");
@@ -397,12 +403,12 @@ public class AiController {
     //笔记同步
     @PostMapping("note_sync")
     public ResponseEntity<String> noteAiSync(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":note_sync");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":note_sync");
         try {
             JSONObject bodyJson = JSONObject.parseObject(body);
             return sendMes(aiService.noteAiSync(bodyJson.getString("note_ai_id"), bodyJson.getString("note"), bodyJson.getJSONArray("note_ticks"), bodyJson.getString("token"), bodyJson.getString("id"), bodyJson.getString("note_content")));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
@@ -410,7 +416,7 @@ public class AiController {
     //笔记历史
     @PostMapping("get_note_history")
     public ResponseEntity<String> getAiNoteHistory(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_ai_note_history");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_ai_note_history");
         JSONObject requestJson = JSONObject.parseObject(body);
 
         String id = requestJson.getString("id");
@@ -422,7 +428,7 @@ public class AiController {
     //获取历史上的笔记
     @PostMapping("note_history")
     public ResponseEntity<String> getAiHistoryNote(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_history_ai_note");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":get_history_ai_note");
         JSONObject requestJson = JSONObject.parseObject(body);
         String note_ai_id = requestJson.getString("note_ai_id");
         String token = requestJson.getString("token");
@@ -432,7 +438,7 @@ public class AiController {
     //增加AI搜题历史
     @PostMapping("insertBQ")
     public ResponseEntity<String> insertBQ(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":insertBQ");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":insertBQ");
         try {
             JSONObject requestJson = JSONObject.parseObject(body);
             String id = requestJson.getString("usr_id");
@@ -446,7 +452,7 @@ public class AiController {
             bq.setBq_id(UUID.randomUUID().toString());
             return sendMes(aiService.insertBQ(bq, id, token));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
@@ -455,14 +461,14 @@ public class AiController {
     @PostMapping("BQList")
     public ResponseEntity<String> getBQList(HttpServletRequest request, @RequestBody String body) throws Exception {
         try {
-            System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":BQList");
+            log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":BQList");
             JSONObject requestJson = JSONObject.parseObject(body);
             String id = requestJson.getString("id");
             String token = requestJson.getString("token");
             int index = requestJson.getInteger("index");
             return sendMes(aiService.getBQListByUserId(id, token, index));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }
@@ -470,7 +476,7 @@ public class AiController {
     //获取单条AI搜题的详细历史记录
     @PostMapping("BQ")
     public ResponseEntity<String> getBQ(HttpServletRequest request, @RequestBody String body) throws Exception {
-        System.out.println(tabNoteInfiniteEncryption.proxyGetIp(request) + ":BQ");
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + ":BQ");
         try {
             JSONObject requestJson = JSONObject.parseObject(body);
             String id = requestJson.getString("id");
@@ -478,7 +484,7 @@ public class AiController {
             String bq_id = requestJson.getString("bq_id");
             return sendMes(aiService.getBQ(bq_id, id, token));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return sendErr();
         }
     }

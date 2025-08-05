@@ -3,6 +3,8 @@ package com.tabnote.server.tabnoteserverboot.component;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -16,6 +18,8 @@ import java.util.Base64;
 
 @Component
 public class TabNoteInfiniteEncryption {
+    
+    private static final Logger log = LoggerFactory.getLogger(TabNoteInfiniteEncryption.class);
 
     AccountMapper accountMapper;
 
@@ -86,7 +90,7 @@ public class TabNoteInfiniteEncryption {
             return new String(stringBytes);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return "";
         }
     }
@@ -114,7 +118,7 @@ public class TabNoteInfiniteEncryption {
             return accountMapper.tokenCheckIn(token);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return "";
         }
     }
@@ -145,7 +149,7 @@ public class TabNoteInfiniteEncryption {
                 return false;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return false;
         }
     }
@@ -177,7 +181,7 @@ public class TabNoteInfiniteEncryption {
                 return false;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return false;
         }
     }

@@ -11,9 +11,12 @@ import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.*;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
@@ -37,6 +40,8 @@ import static com.tabnote.server.tabnoteserverboot.define.AiInfo.*;
 
 @Service
 public class AiServiceImpl implements AiServiceInterface {
+
+    private static final Logger log = LoggerFactory.getLogger(AiServiceImpl.class);
     AiMapper aiMapper;
     AccountMapper accountMapper;
     VipMapper vipMapper;
@@ -98,7 +103,7 @@ public class AiServiceImpl implements AiServiceInterface {
         } else if (model.equals(modelList[10])) {
             requestJson.put("model", modelList[10]);
         } else {
-            System.out.println("异常的模型："+model);
+            log.info("异常的模型："+model);
             requestJson.put("model", model);
         }
 
@@ -223,7 +228,7 @@ public class AiServiceImpl implements AiServiceInterface {
             connection.setRequestProperty("Authorization", "Bearer " + siliconFlowDeepSeek_API_KEY);
         }
         os = connection.getOutputStream();
-        System.out.println("request to deepseek" + requestJson.toString());
+        log.info("request to deepseek" + requestJson.toString());
         os.write(requestJson.toString().getBytes(StandardCharsets.UTF_8));
         os.flush();
         os.close();
@@ -287,7 +292,7 @@ public class AiServiceImpl implements AiServiceInterface {
                                     }
                                 }
                             } catch (NullPointerException e) {
-                                e.printStackTrace();
+                                log.error(e.getMessage());
                                 break;
                             }
                         }
@@ -302,10 +307,10 @@ public class AiServiceImpl implements AiServiceInterface {
             }
         } else {
             returnString.delete(0, returnString.length());
-            System.out.println("err:" + connection.getResponseCode());
+            log.error("err:" + connection.getResponseCode());
 
             BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
-            System.out.println(new String(bis.readAllBytes()));
+            log.info(new String(bis.readAllBytes()));
 
             JSONObject returnJSON = new JSONObject();
             JSONObject returnMessage = new JSONObject();
@@ -347,7 +352,7 @@ public class AiServiceImpl implements AiServiceInterface {
         connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
         connection.setRequestProperty("Authorization", "Bearer " + CHATGPT_API_KEY);
         os = connection.getOutputStream();
-        System.out.println("request" + requestJson.toString());
+        log.info("request" + requestJson.toString());
         os.write(requestJson.toString().getBytes(StandardCharsets.UTF_8));
         os.flush();
         os.close();
@@ -406,7 +411,7 @@ public class AiServiceImpl implements AiServiceInterface {
                                     }
                                 }
                             } catch (NullPointerException e) {
-                                e.printStackTrace();
+                                log.error(e.getMessage());
                                 break;
                             }
                         }
@@ -421,10 +426,10 @@ public class AiServiceImpl implements AiServiceInterface {
             }
         } else {
             returnString.delete(0, returnString.length());
-            System.out.println("err:" + connection.getResponseCode());
+            log.error("err:" + connection.getResponseCode());
 
             BufferedInputStream bis = new BufferedInputStream(connection.getInputStream());
-            System.out.println(new String(bis.readAllBytes()));
+            log.info(new String(bis.readAllBytes()));
 
             JSONObject returnJSON = new JSONObject();
             JSONObject returnMessage = new JSONObject();
@@ -446,7 +451,7 @@ public class AiServiceImpl implements AiServiceInterface {
             response.getWriter().write("\n");
             response.getWriter().flush();
         }catch(Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }finally{
             cdnai.sendToTACADS(ca_id,s);
         }
@@ -506,11 +511,11 @@ public class AiServiceImpl implements AiServiceInterface {
         contents.putArray("messages");
         contents.getJSONArray("messages").add(messages);
 
-        System.out.println(aiMsId + ":::" + mainly);
+        log.info(aiMsId + ":::" + mainly);
         try {
             aiMapper.addNewAiMessages(aiMsId, mainly, id, contents.toString(), dateTime);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return "";
         }
         write("{\"ai_ms_id\":\"" + aiMsId + "\"}",ca_id,null);
@@ -527,7 +532,7 @@ public class AiServiceImpl implements AiServiceInterface {
         try {
             aiMapper.changeAiMessages(contents.toString(), dateTime, String.valueOf(aiMsId));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
 
@@ -539,17 +544,17 @@ public class AiServiceImpl implements AiServiceInterface {
         try {
             AiMessages aiMessages = aiMapper.getUsrAiMessages(aiMsId);
             if (aiMessages != null && aiMessages.getUsr_id().equals(tabNoteInfiniteEncryption.encryptionTokenGetId(token))) {
-                System.out.println(aiMessages.getContents());
+                log.info(aiMessages.getContents());
                 return JSONObject.parseObject(aiMessages.getContents());
             } else {
-                System.out.println("凭证验证错误或ai的id失效");
+                log.error("凭证验证错误或ai的id失效");
                 JSONObject returnMessage = new JSONObject();
                 returnMessage.put("role", "model");
                 returnMessage.put("content", "token_failed");
                 returnJSON.getJSONArray("messages").add(returnMessage);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             JSONObject returnMessage = new JSONObject();
             returnMessage.put("role", "model");
             returnMessage.put("content", "load_failed");
@@ -580,7 +585,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 returnJSON.put("response", "token_check_failed");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
         return returnJSON;
@@ -601,7 +606,7 @@ public class AiServiceImpl implements AiServiceInterface {
                     }
                     String new_note_id = usrId.hashCode() + "" + System.currentTimeMillis();
                     aiMapper.addNewNoteAI(new_note_id, usrId, mainly, note, note_ticks.toString());
-                    System.out.println(new_note_id);
+                    log.info(new_note_id);
                     returnJSON.put("note_ai_id", new_note_id);
                 } else {
                     if (note_ai_id.startsWith(String.valueOf(usrId.hashCode()))) {
@@ -613,7 +618,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 returnJSON.put("response", "token_check_failed");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -644,7 +649,7 @@ public class AiServiceImpl implements AiServiceInterface {
             returnJSON.put("response", "token_check_failed");
         } catch (Exception e) {
             returnJSON.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return returnJSON;
     }
@@ -667,7 +672,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 returnJSON.put("response", "token_check_failed");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
         return returnJSON;
@@ -687,7 +692,7 @@ public class AiServiceImpl implements AiServiceInterface {
             byte[] md5Hash = md5Digest.digest(imageBytes);
             String imgMD5 = bytesToHex(md5Hash);
 
-            System.out.println(imgMD5);
+            log.info(imgMD5);
 
             //
             String boundary = "Boundary-" + new Random().nextInt(1000000);
@@ -739,9 +744,9 @@ public class AiServiceImpl implements AiServiceInterface {
             returnJSON.put("questionList", jsonArray);
 
             returnJSON.put("response", "success");
-            System.out.println(returnJSON);
+            log.info(returnJSON.toString());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -764,7 +769,7 @@ public class AiServiceImpl implements AiServiceInterface {
             returnJSON.put("response", "success");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -783,7 +788,7 @@ public class AiServiceImpl implements AiServiceInterface {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -809,7 +814,7 @@ public class AiServiceImpl implements AiServiceInterface {
             }
         } catch (Exception e) {
             returnJSON.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
 
         return returnJSON;
@@ -829,7 +834,7 @@ public class AiServiceImpl implements AiServiceInterface {
                 returnJSON.put("response", "token_check_failed");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -860,7 +865,7 @@ public class AiServiceImpl implements AiServiceInterface {
             returnVectorHitMess(response, bq.getAi_answer(), text, bq.getText());
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             return false;
         }
     }
@@ -896,7 +901,7 @@ public class AiServiceImpl implements AiServiceInterface {
         this.returnAdminMess(response, "failed,服务器内部错误：" + errMess);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void useQuota(int quotaCost, String id,String idempotence_id) {
         try {

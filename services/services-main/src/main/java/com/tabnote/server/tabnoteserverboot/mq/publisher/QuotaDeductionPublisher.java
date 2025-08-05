@@ -5,21 +5,27 @@ import com.tabnote.server.tabnoteserverboot.component.MQMessages;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
-import org.springframework.amqp.core.Correlation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import java.sql.Timestamp;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static com.tabnote.server.tabnoteserverboot.define.MQName.EXCHANGE_DIRECT;
-import static com.tabnote.server.tabnoteserverboot.define.MQName.ROUTING_KEY;
+import static com.tabnote.server.tabnoteserverboot.define.MQName.*;
 
 @Component
 public class QuotaDeductionPublisher {
+
+    private static final Logger log = LoggerFactory.getLogger(QuotaDeductionPublisher.class);
 
     private RabbitTemplate rabbitTemplate;
 
@@ -49,6 +55,14 @@ public class QuotaDeductionPublisher {
         this.vipMapper = vipMapper;
     }
 
+    @Autowired
+    @Qualifier("persistentMessagePostProcessor")
+    private MessagePostProcessor persistentProcessor;
+
+    @Autowired
+    @Qualifier("nonPersistentMessagePostProcessor")
+    private MessagePostProcessor nonPersistentProcessor;
+
     public RankAndQuota getQuotaAndRank(String id) {
         try {
             String sr = redisTemplate.opsForValue().get("RANK:" + id);
@@ -64,31 +78,52 @@ public class QuotaDeductionPublisher {
         } catch (Exception e) {
             if (e.getMessage().equals("no redis")) {
                 RankAndQuota rankAndQuota = vipMapper.selectRankByUserId(id);
-                redisTemplate.opsForValue().set("QUOTA:" + id, rankAndQuota.getQuota() + "",450, TimeUnit.MINUTES);
-                redisTemplate.opsForValue().set("RANK:" + id, rankAndQuota.getRank() + "",450, TimeUnit.MINUTES);
+                redisTemplate.opsForValue().set("QUOTA:" + id, rankAndQuota.getQuota() + "", 450, TimeUnit.MINUTES);
+                redisTemplate.opsForValue().set("RANK:" + id, rankAndQuota.getRank() + "", 450, TimeUnit.MINUTES);
                 return rankAndQuota;
-            }else {
-                e.printStackTrace();
+            } else {
+                log.error(e.getMessage());
                 RankAndQuota rankAndQuota = vipMapper.selectRankByUserId(id);
-                redisTemplate.opsForValue().set("QUOTA:" + id, rankAndQuota.getQuota() + "",450, TimeUnit.MINUTES);
-                redisTemplate.opsForValue().set("RANK:" + id, rankAndQuota.getRank() + "",450, TimeUnit.MINUTES);
+                redisTemplate.opsForValue().set("QUOTA:" + id, rankAndQuota.getQuota() + "", 450, TimeUnit.MINUTES);
+                redisTemplate.opsForValue().set("RANK:" + id, rankAndQuota.getRank() + "", 450, TimeUnit.MINUTES);
                 return rankAndQuota;
             }
         }
     }
 
     public void publish(String message) {
-        System.out.println("向RabbitMQ发送信息：" + message);
+        log.info("向RabbitMQ发送信息：" + message);
         UUID uuid = UUID.randomUUID();
         mqMessages.addMessage(uuid.toString(), message, EXCHANGE_DIRECT);
-        rabbitTemplate.convertAndSend(EXCHANGE_DIRECT, ROUTING_KEY, message, new CorrelationData(uuid.toString()));
+        try {
+            rabbitTemplate.convertAndSend(EXCHANGE_DIRECT, ROUTING_KEY, message, persistentProcessor, new CorrelationData(uuid.toString()));
+        } catch (AmqpException e) {
+            publishToDeadQueue(message);
+        }
+    }
+
+    public void publishToDeadQueue(String message) {
+        try {
+            log.info("向RabbitMQ发送死信：" + message);
+            UUID uuid = UUID.randomUUID();
+            mqMessages.addMessage(uuid.toString(), message, EXCHANGE_DEAD);
+            rabbitTemplate.convertAndSend(EXCHANGE_DEAD, ROUTING_DEAD, message, nonPersistentProcessor, new CorrelationData(uuid.toString()));
+        } catch (Exception e) {
+            log.error(e.getMessage()+"向RabbitMQ发送信息失败，死信也失败了，并且是直接catch错误");
+        }
     }
 
     public void quotaCost(String id, int cost) {
-        redisTemplate.opsForValue().decrement("QUOTA:" + id, cost);
+        try {
+            redisTemplate.opsForValue().decrement("QUOTA:" + id, cost);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            log.error("Redis爆炸了");
+        }
         JSONObject jsonObject = new JSONObject();
+        String id_id = System.currentTimeMillis() + UUID.randomUUID().toString().substring(0, 23);
         //防止二次投递进行的幂等性操作
-        jsonObject.put("idempotence_id", UUID.randomUUID().toString());
+        jsonObject.put("idempotence_id", id_id);
         jsonObject.put("quota", cost);
         jsonObject.put("user_id", id);
         jsonObject.put("timestamp", System.currentTimeMillis());

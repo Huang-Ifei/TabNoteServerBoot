@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn" >
+
+    <Appenders>
+<!--        不要输出到控制台-->
+<!--        <Console name="Console" target="SYSTEM_OUT">-->
+<!--            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"/>-->
+<!--        </Console>-->
+        <!--基本日志        -->
+        <RollingFile name="AppLog" fileName="TabNoteLogs/TabNoteServerBoot-basic.log"
+                     filePattern="TabNoteLogs/TabNoteServerBoot-basic-%d{yyyy-MM-dd}.log">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5p %c{1} - %msg%n</Pattern>
+            </PatternLayout>
+            <!--时间切割 -->
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+        <!--MyBatis日志        -->
+        <RollingFile name="MyBatisSQL" fileName="TabNoteLogs/TabNoteServerBoot-mybatis-sql.log"
+                     filePattern="TabNoteLogs/TabNoteServerBoot-mybatis-sql-%d{yyyy-MM-dd}.log">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5p %c{1} - %msg%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+        <!--错误日志        -->
+        <RollingFile name="ErrorLog" fileName="TabNoteLogs/TabNoteServerBoot-error.log"
+                     filePattern="TabNoteLogs/TabNoteServerBoot-error-%d{yyyy-MM-dd}.log">
+            <PatternLayout>
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss} [%t] %-5p %c{1} - %msg%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+            <!--只记录 error 及以上日志        -->
+            <Filters>
+                <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <Logger name="com.alibaba.nacos" level="OFF" additivity="false"/>
+        <!--MyBatis的SQL日志, loggerName根据信息选择        -->
+        <Logger name="org.mybatis" level="debug" additivity="false">
+            <AppenderRef ref="MyBatisSQL"/>
+        </Logger>
+        <Root level="info">
+            <AppenderRef ref="ErrorLog"/>
+            <AppenderRef ref="AppLog"/>
+<!--            <AppenderRef ref="Console"/>-->
+        </Root>
+    </Loggers>
+</Configuration>
+

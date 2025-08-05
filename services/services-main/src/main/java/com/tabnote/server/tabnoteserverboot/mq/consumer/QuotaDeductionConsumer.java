@@ -2,7 +2,10 @@ package com.tabnote.server.tabnoteserverboot.mq.consumer;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.rabbitmq.client.Channel;
+import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.Exchange;
 import org.springframework.amqp.rabbit.annotation.Queue;
@@ -18,11 +21,12 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 
-import static com.tabnote.server.tabnoteserverboot.define.MQName.QUEUE_BACKUP;
-import static com.tabnote.server.tabnoteserverboot.define.MQName.QUEUE_NAME;
+import static com.tabnote.server.tabnoteserverboot.define.MQName.*;
 
 @Component
 public class QuotaDeductionConsumer {
+
+    private static final Logger log = LoggerFactory.getLogger(QuotaDeductionConsumer.class);
 
     private AiServiceInterface aiService;
 
@@ -33,14 +37,20 @@ public class QuotaDeductionConsumer {
 
     @RabbitListener(queues = {QUEUE_NAME})
     public void processMessages(String data, Message message, Channel channel) {
-        System.out.println("接收到消息: " + data);
+        log.info("接收到消息: " + data);
         action(data, message, channel);
     }
 
     @RabbitListener(queues = {QUEUE_BACKUP})
     public void processBackUpMessages(String data, Message message, Channel channel) {
-        System.out.println("备份队列接收到消息: " + data);
+        log.info("备份队列接收到消息: " + data);
         action(data, message, channel);
+    }
+
+    @RabbitListener(queues = {QUEUE_DEAD})
+    public void processDeadMessages(String data, Message message, Channel channel) {
+        log.info("死信队列接收到消息: " + data);
+        deadQueue(data, message, channel);
     }
 
 
@@ -55,26 +65,41 @@ public class QuotaDeductionConsumer {
             aiService.useQuota(json.getInteger("quota"), json.getString("user_id"), json.getString("idempotence_id"));
             channel.basicAck(deliveryTag, true);
         } catch (DuplicateKeyException e) {
-            e.printStackTrace();
-            System.out.println("主键重复");
+            log.error(e.getMessage());
+            log.error("主键重复");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             try {
                 if (redelivered) {
                     //最后一个参数取值决定是否重新投递这个消息
-                    channel.basicNack(deliveryTag, false, false);
+//                    channel.basicNack(deliveryTag, false, false);
+                    //重新投递到死信队列
+//                    quotaDeductionPublisher.publishToDeadQueue(data);
+                    channel.basicReject(deliveryTag, false);
 
-                    File file = new File("aaa_QuotaCostProblemData");
-                    if (!file.exists()) {
-                        file.createNewFile();
-                    }
-                    FileWriter fileWriter = new FileWriter(file, true);
-                    fileWriter.write(data + "\n");
-                    fileWriter.flush();
-                    fileWriter.close();
                 } else {
                     channel.basicNack(deliveryTag, false, true);
                 }
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
+
+    public void deadQueue(String data, Message message, Channel channel) {
+        //获取当前信息的tag
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+        try {
+            JSONObject json = JSONObject.parseObject(data);
+            aiService.useQuota(json.getInteger("quota"), json.getString("user_id"), json.getString("idempotence_id"));
+            channel.basicAck(deliveryTag, true);
+        } catch (DuplicateKeyException e) {
+            log.error(e.getMessage());
+            log.error("主键重复");
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            try {
+                channel.basicNack(deliveryTag, false, true);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }

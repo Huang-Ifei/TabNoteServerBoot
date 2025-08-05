@@ -15,18 +15,24 @@ import com.tabnote.server.tabnoteserverboot.mq.publisher.QuotaDeductionPublisher
 import com.tabnote.server.tabnoteserverboot.redis.LikeCount;
 import com.tabnote.server.tabnoteserverboot.services.inteface.FileServiceInterface;
 import com.tabnote.server.tabnoteserverboot.services.inteface.TabNoteServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class TabNoteServiceImpl implements TabNoteServiceInterface {
+
+    private static final Logger log = LoggerFactory.getLogger(TabNoteServiceImpl.class);
 
     TabNoteMapper tabNoteMapper;
     ClassMapper classMapper;
@@ -90,7 +96,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             json.put("response", "success");
         } catch (Exception e) {
             json.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return json;
     }
@@ -122,10 +128,10 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
                 }
             }
         } catch (NullPointerException e) {
-            System.out.println("推荐系统无法查询上次读取的内容，用户id为：" + id);
+            log.error("推荐系统无法查询上次读取的内容，用户id为：" + id);
         } catch (Exception e) {
             json.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         //最近访问的15个贴文的标签进行统计选出最高的3个
         try {
@@ -133,10 +139,10 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             List<String> userTags = tagsListProcess.tagsListChoiceBestModern(ults, 3);
             tags.addAll(userTags);
         } catch (NullPointerException e) {
-            System.out.println("推荐系统无法查询最后读取15条的内容，用户id为：" + id);
+            log.error("推荐系统无法查询最后读取15条的内容，用户id为：" + id);
         } catch (Exception e) {
             json.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         //最新的30个贴文的标签进行统计选出最高的5个
         try {
@@ -144,10 +150,10 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             List<String> allTags = tagsListProcess.tagsListChoiceBestModern(alts, 5);
             tags.addAll(allTags);
         } catch (NullPointerException e) {
-            System.out.println("推荐系统无法查询最近30个贴文");
+            log.error("推荐系统无法查询最近30个贴文");
         } catch (Exception e) {
             json.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         JSONArray jsonArray = new JSONArray();
         jsonArray.addAll(userSetTags);
@@ -172,14 +178,14 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             returnJSON.put("pagesCount", count);
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
         return returnJSON;
     }
 
     //不设关键词获取某一页
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED,readOnly = true)
     @Override
     public JSONObject getPageTabNotes(int page) {
         long startTime1 = System.currentTimeMillis();
@@ -191,6 +197,13 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             List<TabNoteForList> list = tabNoteMapper.getTabNote(start);
             returnJSON.putArray("list");
 
+            List<String> userIds = list.stream().map(TabNoteForList::getUsr_id).toList();
+
+            Map<String, String> userNames = new HashMap<>();
+            for (String userId : userIds) {
+                userNames.put(userId, accountMapper.getNameById(userId));
+            }
+
             long startTime2 = System.currentTimeMillis();
 
             for (TabNoteForList tabNoteForList : list) {
@@ -198,7 +211,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
                 tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
                 tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
-                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("usr_name", userNames.get(tabNoteForList.getUsr_id()));
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
@@ -208,7 +221,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
                 returnJSON.getJSONArray("list").add(tabNoteJSON);
             }
-            System.out.println("****JSON build time(ms)：" + (System.currentTimeMillis() - startTime2));
+            log.info("****JSON build time(ms)：" + (System.currentTimeMillis() - startTime2));
             int count = tabNoteMapper.getTabNotePages();
             if (count % 20 == 0) {
                 count = count / 20;
@@ -218,11 +231,11 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             returnJSON.put("pages", count);
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
             throw e;
         }
-        System.out.println("****get tab note time(ms)：" + (System.currentTimeMillis() - startTime1));
+        log.info("****get tab note time(ms)：" + (System.currentTimeMillis() - startTime1));
         return returnJSON;
     }
 
@@ -241,14 +254,14 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             returnJSON.put("response", "click");
         } catch (Exception e) {
             returnJSON.put("response", "failed");
-            e.printStackTrace();
+            log.error(e.getMessage());
             throw e;
         }
         return returnJSON;
     }
 
     //获取某个
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @Override
     public JSONObject getTabNote(String tabNoteId, String id, String token) {
         JSONObject returnJSON = new JSONObject();
@@ -261,7 +274,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
                     tabNoteMapper.clickNote(tabNoteId, id);
                     tabNoteMapper.clickThis(tabNoteId);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    log.error(e.getMessage());
                 }
             } else {
                 returnJSON.put("is_liked", 0);
@@ -339,7 +352,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
                 returnJSON.put("response", "token_check_failed");
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
             throw e;
         }
@@ -354,7 +367,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         try {
             tabNoteMapper.deleteTabNote(tabNoteId);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -369,7 +382,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
             tabNoteMapper.updateTabNote(tab_note_id, ip_address, tab_note_name, tags, tab_note, date_time);
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
 
@@ -378,7 +391,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true,isolation = Isolation.READ_COMMITTED)
     public JSONObject searchTabNote(String key, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
@@ -386,12 +399,20 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         try {
             List<TabNoteForList> list = tabNoteMapper.searchTabNote(key, start);
             returnJSON.putArray("list");
+
+            List<String> userIds = list.stream().map(TabNoteForList::getUsr_id).toList();
+
+            Map<String, String> userNames = new HashMap<>();
+            for (String userId : userIds) {
+                userNames.put(userId, accountMapper.getNameById(userId));
+            }
+
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
 
                 tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
                 tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
-                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("usr_name", userNames.get(tabNoteForList.getUsr_id()));
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
@@ -411,7 +432,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
             throw e;
         }
@@ -427,12 +448,20 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         try {
             List<TabNoteForList> list = tabNoteMapper.searchTabNoteWithCls(className, key, start);
             returnJSON.putArray("list");
+
+            List<String> userIds = list.stream().map(TabNoteForList::getUsr_id).toList();
+
+            Map<String, String> userNames = new HashMap<>();
+            for (String userId : userIds) {
+                userNames.put(userId, accountMapper.getNameById(userId));
+            }
+
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
 
                 tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
                 tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
-                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("usr_name", userNames.get(tabNoteForList.getUsr_id()));
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
@@ -452,7 +481,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
             throw e;
         }
@@ -469,12 +498,20 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         try {
             List<TabNoteForList> list = tabNoteMapper.searchTabNoteById(id, start);
             returnJSON.putArray("list");
+
+            List<String> userIds = list.stream().map(TabNoteForList::getUsr_id).toList();
+
+            Map<String, String> userNames = new HashMap<>();
+            for (String userId : userIds) {
+                userNames.put(userId, accountMapper.getNameById(userId));
+            }
+
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
 
                 tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
                 tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
-                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("usr_name", userNames.get(tabNoteForList.getUsr_id()));
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
@@ -494,14 +531,14 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
         return returnJSON;
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true,isolation = Isolation.READ_COMMITTED)
     public JSONObject searchTabNoteByClass(String className, Integer page) {
         int start = (page - 1) * 20;
         JSONObject returnJSON = new JSONObject();
@@ -509,12 +546,20 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         try {
             List<TabNoteForList> list = tabNoteMapper.searchTabNoteByClass(className, start);
             returnJSON.putArray("list");
+
+            List<String> userIds = list.stream().map(TabNoteForList::getUsr_id).toList();
+
+            Map<String, String> userNames = new HashMap<>();
+            for (String userId : userIds) {
+                userNames.put(userId, accountMapper.getNameById(userId));
+            }
+
             for (TabNoteForList tabNoteForList : list) {
                 JSONObject tabNoteJSON = new JSONObject();
 
                 tabNoteJSON.put("tab_note_id", tabNoteForList.getTab_note_id());
                 tabNoteJSON.put("usr_id", tabNoteForList.getUsr_id());
-                tabNoteJSON.put("usr_name", accountMapper.getNameById(tabNoteForList.getUsr_id()));
+                tabNoteJSON.put("usr_name", userNames.get(tabNoteForList.getUsr_id()));
                 tabNoteJSON.put("class_name", tabNoteForList.getClass_name());
                 tabNoteJSON.put("tab_note_name", tabNoteForList.getTab_note_name());
                 tabNoteJSON.put("tags", tabNoteForList.getTags());
@@ -534,7 +579,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
 
             returnJSON.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJSON.put("response", "failed");
         }
         return returnJSON;

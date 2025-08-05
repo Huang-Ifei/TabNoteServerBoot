@@ -1,6 +1,8 @@
 package com.tabnote.server.tabnoteserverboot.component;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -14,6 +16,9 @@ import java.util.List;
 
 @Component
 public class TabNoteDefinitelyVectorCache {
+    
+    private static final Logger log = LoggerFactory.getLogger(TabNoteDefinitelyVectorCache.class);
+    
     DiscoveryClient discoveryClient;
     @Autowired
     public TabNoteDefinitelyVectorCache(DiscoveryClient discoveryClient) {
@@ -43,10 +48,10 @@ public class TabNoteDefinitelyVectorCache {
             HttpEntity<String> requestEntity = new HttpEntity<>(addCacheJSON.toString(), headers);
 
             // 使用 HttpEntity 发送请求
-            System.out.println(restTemplate.postForObject(url + "/add", requestEntity, String.class));
+            log.info(restTemplate.postForObject(url + "/add", requestEntity, String.class));
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("缓存添加操作出错：" + e);
+            log.error(e.getMessage());
+            log.error("缓存添加操作出错：" + e.getMessage());
         }
     }
 
@@ -68,19 +73,19 @@ public class TabNoteDefinitelyVectorCache {
 
             String backData = restTemplate.postForObject(url + "/find", requestEntity, String.class);
             // 使用 HttpEntity 发送请求
-            System.out.println(backData);
+            log.info(backData);
 
             JSONObject cacheBackJSON = JSONObject.parseObject(backData);
             if (cacheBackJSON.getString("response").equals("hit")) {
-                System.out.println("缓存命中：" + backData);
+                log.info("缓存命中：" + backData);
                 return cacheBackJSON.getJSONObject("data").getJSONObject("entity").getString("id");
             } else {
-                System.out.println("缓存未命中：" + backData);
+                log.info("缓存未命中：" + backData);
                 return "";
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("缓存添加操作出错：" + e);
+            log.error(e.getMessage());
+            log.error("缓存获取操作出错：" + e.getMessage());
             return "";
         }
     }

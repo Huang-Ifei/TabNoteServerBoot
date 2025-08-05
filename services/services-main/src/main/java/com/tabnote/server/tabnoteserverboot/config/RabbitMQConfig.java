@@ -4,10 +4,14 @@ import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.MQMessages;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import jakarta.annotation.PostConstruct;
+import org.springframework.amqp.core.MessageDeliveryMode;
+import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.core.ReturnedMessage;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.UUID;
@@ -39,6 +43,14 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
         this.aiService = aiService;
     }
 
+    @Autowired
+    @Qualifier("persistentMessagePostProcessor")
+    private MessagePostProcessor persistentProcessor;
+
+    @Autowired
+    @Qualifier("nonPersistentMessagePostProcessor")
+    private MessagePostProcessor nonPersistentProcessor;
+
     //PostConstruct注解是Java的一个标准注解，当对象创建之后立即执行
     @PostConstruct
     public void initRabbitTemplate() {
@@ -65,8 +77,8 @@ public class RabbitMQConfig implements RabbitTemplate.ConfirmCallback, RabbitTem
 
             if (ms != null && mqMessages.getTryTime(id) < 2) {
                 if (mqMessages.getAimExchange(id).equals(EXCHANGE_DIRECT)) {
-                    System.out.println("发送到备份交换机");
-                    rabbitTemplate.convertAndSend(EXCHANGE_BACKUP, ROUTING_BACKUP, ms, new CorrelationData(id));
+                    System.out.println("发送到备份交换机(不持久化)");
+                    rabbitTemplate.convertAndSend(EXCHANGE_BACKUP, ROUTING_BACKUP, ms, nonPersistentProcessor ,new CorrelationData(id));
                 }
             } else if (ms != null && mqMessages.getTryTime(id) >= 2) {
                 System.out.println("多次尝试写入备份交换机依旧失效");

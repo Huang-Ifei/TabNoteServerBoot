@@ -1,6 +1,8 @@
 package com.tabnote.server.tabnoteserverboot.component;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
@@ -15,6 +17,8 @@ import java.util.List;
 //CDN不准确，应该是AI对话缓存/分发微服务
 @Component
 public class CDNAI {
+
+    private static final Logger log = LoggerFactory.getLogger(CDNAI.class);
 
     DiscoveryClient discoveryClient;
     @Autowired
@@ -35,7 +39,7 @@ public class CDNAI {
             url = "http://" + apiCheckMicroService.get(0).getHost() + ":" + apiCheckMicroService.get(0).getPort();
         } catch (Exception e) {
             System.out.println("TabNote_AI_Cache_And_Delivery_Service,TabNote精华爆炸啦！！我的缓存递送微服务爆炸啦！！");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return url;
     }
@@ -55,7 +59,7 @@ public class CDNAI {
             HttpEntity<String> he = restTemplate.postForEntity(getTACADSHost()+"/push", formEntity, String.class);
             System.out.println(he.getBody());
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
     public void newTACADS(String ca_id){
@@ -73,7 +77,7 @@ public class CDNAI {
             HttpEntity<String> he = restTemplate.postForEntity(getTACADSHost()+"/new", formEntity, String.class);
             System.out.println(he.getBody());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
     }
 }

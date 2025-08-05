@@ -1,5 +1,7 @@
 package com.tabnote.server.tabnoteserverboot.component;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +15,8 @@ import java.util.List;
 
 @Component
 public class SecurityComponent {
+    
+    private static final Logger log = LoggerFactory.getLogger(SecurityComponent.class);
 
     private List<String> wjcList = new ArrayList<>();
 
@@ -28,10 +32,10 @@ public class SecurityComponent {
                 }
             }
             bufferedReader.close();
-            System.out.println("风控系统已部署，共有" + wjcList.size() + "条风控词，被添加");
+            log.info("风控系统已部署，共有" + wjcList.size() + "条风控词，被添加");
         } catch (Exception e) {
-            System.out.println("风控系统错误");
-            e.printStackTrace();
+            log.error("风控系统错误");
+            log.error(e.getMessage());
         }
     }
 
@@ -43,7 +47,7 @@ public class SecurityComponent {
                 map.put("id",id);
                 map.put("type",type);
                 map.put("data",s);
-                System.out.println("ip:"+map.get("ip")+"id:"+map.get("id")+"type:"+map.get("type")+"data:"+map.get("data")+"\n**************************************************\n\n");
+                log.info("ip:"+map.get("ip")+"id:"+map.get("id")+"type:"+map.get("type")+"data:"+map.get("data")+"\n**************************************************\n\n");
                 problemList.add(map);
                 return true;
             }
@@ -65,10 +69,10 @@ public class SecurityComponent {
             }
             wjcList = list;
             bufferedReader.close();
-            System.out.println("风控系统已重写，共有" + wjcList.size() + "个风控词");
+            log.info("风控系统已重写，共有" + wjcList.size() + "个风控词");
         } catch (Exception e) {
-            System.out.println("风控系统错误");
-            e.printStackTrace();
+            log.error("风控系统错误");
+            log.error(e.getMessage());
         }
     }
 
@@ -89,8 +93,8 @@ public class SecurityComponent {
                 fileWriter.close();
             }
         }catch (Exception e){
-            System.out.println("风控系统错误");
-            e.printStackTrace();
+            log.error("风控系统错误");
+            log.error(e.getMessage());
         }
 
     }

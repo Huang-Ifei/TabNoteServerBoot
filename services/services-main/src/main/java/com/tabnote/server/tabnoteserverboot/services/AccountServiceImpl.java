@@ -8,6 +8,8 @@ import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.ResetIdMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
 import com.tabnote.server.tabnoteserverboot.services.inteface.AccountServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,8 @@ import java.util.List;
 
 @Service
 public class AccountServiceImpl implements AccountServiceInterface {
+
+    private static final Logger log = LoggerFactory.getLogger(AccountServiceImpl.class);
 
     AccountMapper mapper;
     @Autowired
@@ -64,7 +68,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             }
             return json;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             json.put("response", "server_error");
             return json;
         }
@@ -81,7 +85,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             }
             return json;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             json.put("response", "server_error");
             return json;
         }
@@ -103,7 +107,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             }
             return json;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             json.put("response", "server_error");
             return json;
         }
@@ -141,7 +145,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
                 return jsonObject;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response", "账号不存在");
             return jsonObject;
         }
@@ -167,7 +171,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
                 return returnJson;
             }
         }catch (Exception e){
-            e.printStackTrace();
+            log.error(e.getMessage());
             returnJson.put("response", "failed");
             return returnJson;
         }
@@ -211,7 +215,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             jsonObject.put("token",cryptic.encrypt(token));
             return jsonObject;
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             jsonObject.put("response", "可能存在非法字符");
             return jsonObject;
         }
@@ -225,7 +229,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             mapper.deleteToken(token);
             json.put("response", "success");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage());
             json.put("response", e.toString());
         }
         return json;
@@ -256,12 +260,12 @@ public class AccountServiceImpl implements AccountServiceInterface {
             }
         } catch (Exception e) {
             json.put("response", "失败");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return json;
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public JSONObject resetID(JSONObject jsonObject) {
 
@@ -282,7 +286,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             HashMap<String, String> idCheck = mapper.searchById(jsonObject.getString("id"));
             if (idCheck == null) {
                 resetIdMapper.resetID(id,new_id);
-                resetIdMapper.updateToken(new_id,jsonObject.getString("token"));
+                resetIdMapper.updateToken(id,new_id);
                 resetIdMapper.updateAiMId(id,new_id);
                 resetIdMapper.updateHisNoteId(id,new_id);
                 resetIdMapper.updateMessagesId(id,new_id);
@@ -312,7 +316,8 @@ public class AccountServiceImpl implements AccountServiceInterface {
 
         } catch (Exception e) {
             json.put("response", "失败");
-            e.printStackTrace();
+            log.error(e.getMessage());
+            throw e;
         }
         return json;
     }
@@ -342,7 +347,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
 
         } catch (Exception e) {
             json.put("response", "失败");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return json;
     }
@@ -363,7 +368,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             json.put("response","success");
         }catch (Exception e){
             json.put("response","数据错误");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return json;
     }
@@ -384,7 +389,7 @@ public class AccountServiceImpl implements AccountServiceInterface {
             json.put("response","success");
         }catch (Exception e){
             json.put("response","error");
-            e.printStackTrace();
+            log.error(e.getMessage());
         }
         return json;
     }
