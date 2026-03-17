@@ -102,12 +102,14 @@ public class AiServiceImpl implements AiServiceInterface {
             requestJson.put("model", modelList[9]);
         } else if (model.equals(modelList[10])) {
             requestJson.put("model", modelList[10]);
+        } else if (model.equals(modelList[11])) {
+            requestJson.put("model", modelList[11]);
         } else {
             log.info("异常的模型："+model);
             requestJson.put("model", model);
         }
 
-        if (model.equals(modelList[3]) || model.equals(modelList[4]) || model.equals(modelList[7])) {
+        if (model.equals(modelList[3]) || model.equals(modelList[4]) || model.equals(modelList[7]) || model.equals(modelList[11])) {
             //deepseek流式传输+使用显示
             requestJson.put("stream", true);
             requestJson.put("include_usage", true);
@@ -200,7 +202,7 @@ public class AiServiceImpl implements AiServiceInterface {
     public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String ca_id) throws Exception {
         String url = "https://api.deepseek.com/chat/completions";
 
-        if (requestJson.getString("model").equals(modelList[4]) || requestJson.getString("model").equals(modelList[7])) {
+        if (requestJson.getString("model").equals(modelList[4]) || requestJson.getString("model").equals(modelList[7])|| requestJson.getString("model").equals(modelList[11])) {
             url = "https://api.siliconflow.cn/v1/chat/completions";
         }
 
