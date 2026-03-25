@@ -3,6 +3,7 @@ package com.tabnote.server.tabnoteserverboot.controller;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.*;
+import com.tabnote.server.tabnoteserverboot.define.AiSysPrompt;
 import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.AiMapper;
 import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
@@ -128,7 +129,7 @@ public class AiController {
             String model = bodyJson.getString("model");
             //将请求JSON变为向API发送的JSON
             JSONArray messages = bodyJson.getJSONArray("messages");
-            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model);
+            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model, AiSysPrompt.defaultPrompt);
             StringBuffer sb = new StringBuffer();
             String ca_id = aiService.newAndResponseCAID(response);
             cdnai.newTACADS(ca_id);
@@ -159,7 +160,7 @@ public class AiController {
             String model = bodyJson.getString("model");
             //将请求JSON变为向API发送的JSON
             JSONArray messages = bodyJson.getJSONArray("messages");
-            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model);
+            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model,AiSysPrompt.defaultPrompt);
             StringBuffer sb = new StringBuffer();
             String ca_id = aiService.newAndResponseCAID(response);
             cdnai.newTACADS(ca_id);
@@ -206,7 +207,7 @@ public class AiController {
                     bodyJson.put("text", ocr.getOCR(bodyJson.getString("imgHigh")));
 
                     //将请求JSON变为向API发送的JSON（识别图片内容）
-                    JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[9]);
+                    JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[9],AiSysPrompt.defaultPrompt);
 
                     try {
                         qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
@@ -246,7 +247,7 @@ public class AiController {
                         try {
                             if (!sb.isEmpty()) {
                                 log.info("使用Silicon DeepSeek API");
-                                qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4]), response, answer,ca_id);
+                                qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4],AiSysPrompt.defaultPrompt), response, answer,ca_id);
                             }
                         } catch (Exception ex) {
                             ex.printStackTrace();
@@ -257,7 +258,7 @@ public class AiController {
                         log.info("扣费：gpt4o用于识别："+qC1+"；deepSeek用于解题："+qC2);
                         quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1 + qC2);
                     } else {
-                        JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8]);
+                        JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8],AiSysPrompt.defaultPrompt);
 
                         //抄送给API
                         int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer,ca_id);
@@ -274,7 +275,7 @@ public class AiController {
             if (answer.isEmpty() && hitDataId.isEmpty()) {
                 log.info("直接解题");
                 //将请求JSON变为向API发送的JSON
-                JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8]);
+                JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8],AiSysPrompt.defaultPrompt);
 
                 //抄送给API
                 int quotaCost = 0;
@@ -331,7 +332,7 @@ public class AiController {
             String model = bodyJson.getString("model");
             //将请求JSON变为向API发送的JSON
             JSONArray messages = bodyJson.getJSONArray("messages");
-            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model);
+            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model,AiSysPrompt.defaultPrompt);
             StringBuffer sb = new StringBuffer();
             //抄送给API
             int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);

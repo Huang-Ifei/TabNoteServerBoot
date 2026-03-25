@@ -11,7 +11,7 @@ import java.io.IOException;
 public interface AiServiceInterface {
 
     //将请求JSON变为向ChatGPT API发送的JSON
-    JSONObject buildChatGPTRequestJSON(JSONArray messages, String model);
+    JSONObject buildChatGPTRequestJSON(JSONArray messages, String model, String sysPrompt);
 
     JSONArray buildBQImgRequestToJSONArray(JSONObject bodyJson, String type);
 

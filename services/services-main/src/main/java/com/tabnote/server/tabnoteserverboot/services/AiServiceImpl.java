@@ -14,9 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.*;
@@ -28,7 +26,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -82,7 +79,7 @@ public class AiServiceImpl implements AiServiceInterface {
 
     //将请求JSON变为向ChatGPT API发送的JSON
     @Override
-    public JSONObject buildChatGPTRequestJSON(JSONArray messages, String model) {
+    public JSONObject buildChatGPTRequestJSON(JSONArray messages, String model, String sysPrompt) {
         JSONObject requestJson = new JSONObject();
         if (model.equals("gpt-4o") || model.equals("gpt-4o-2024-08-06")) {
             requestJson.put("model", modelList[0]);
@@ -122,15 +119,10 @@ public class AiServiceImpl implements AiServiceInterface {
         }
         requestJson.putArray("messages");
         JSONArray contents = requestJson.getJSONArray("messages");
-        if (model.equals(modelList[3]) || model.equals(modelList[4])) {
+        if (!model.equals("o1-mini") || !model.equals(modelList[10])) {
             JSONObject sysJson = new JSONObject();
             sysJson.put("role", "system");
-            sysJson.put("content", "You are a helpful assistant!您的第一语言设定为中文!思维链（思考部分）要简洁！不要反复确认！最多反思确认一次！");
-            contents.add(sysJson);
-        } else if (!model.equals("o1-mini") || !model.equals(modelList[10])) {
-            JSONObject sysJson = new JSONObject();
-            sysJson.put("role", "system");
-            sysJson.put("content", "You are a helpful assistant!您的第一语言设定为中文。");
+            sysJson.put("content", sysPrompt);
             contents.add(sysJson);
         }
 
@@ -459,6 +451,7 @@ public class AiServiceImpl implements AiServiceInterface {
         }
     }
 
+    //计算quotaCost额度花费
     private int countQuota(JSONObject tempJSON, JSONObject requestJson) {
         int quotaCost = 0;
         if (tempJSON.containsKey("usage") && tempJSON.get("usage") != null) {
@@ -484,6 +477,8 @@ public class AiServiceImpl implements AiServiceInterface {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens")  + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 4;
             } else if (requestJson.getString("model").equals(modelList[10])) {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 20 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 80;
+            } else if (requestJson.getString("model").equals(modelList[11])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 4;
             }
         }
         return quotaCost;
