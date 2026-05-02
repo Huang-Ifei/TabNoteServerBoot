@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin
 @Controller
+@RequestMapping("/book")
 public class BookController {
 
     private static final Logger log = LoggerFactory.getLogger(BookController.class);
@@ -83,9 +84,8 @@ public class BookController {
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             String book_id = jsonObject.getString("book_id");
-            String usr_id = jsonObject.getString("usr_id");
 
-            return sendMes(bookService.getBookDetail(book_id, usr_id));
+            return sendMes(bookService.getBookDetail(book_id));
         } catch (Exception e) {
             log.error("Get book detail error: {}", e.getMessage());
             return sendErr();
@@ -97,13 +97,9 @@ public class BookController {
         log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "book_list");
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            String usr_id = jsonObject.getString("usr_id");
-            Integer page = jsonObject.getInteger("page");
-            if (page == null || page <= 0) {
-                page = 1;
-            }
+            Integer index = jsonObject.getInteger("index");
 
-            return sendMes(bookService.getBookList(usr_id, page));
+            return sendMes(bookService.getBookList(index));
         } catch (Exception e) {
             log.error("Get book list error: {}", e.getMessage());
             return sendErr();
@@ -116,10 +112,9 @@ public class BookController {
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             String book_id = jsonObject.getString("book_id");
-            String book_name = jsonObject.getString("book_name");
             String text = jsonObject.getString("text");
 
-            return sendMes(bookService.insertBookContent(book_id, book_name, text));
+            return sendMes(bookService.insertBookContent(book_id, text));
         } catch (Exception e) {
             log.error("Insert book content error: {}", e.getMessage());
             return sendErr();
@@ -132,10 +127,9 @@ public class BookController {
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
             String book_id = jsonObject.getString("book_id");
-            String book_name = jsonObject.getString("book_name");
             String text = jsonObject.getString("text");
 
-            return sendMes(bookService.insertBookContentWithParagraphs(book_id, book_name, text));
+            return sendMes(bookService.insertBookContentWithParagraphs(book_id, text));
         } catch (Exception e) {
             log.error("Insert book content with paragraphs error: {}", e.getMessage());
             return sendErr();
@@ -147,12 +141,12 @@ public class BookController {
         log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + "book_content_search");
         try {
             JSONObject jsonObject = JSONObject.parseObject(requestBody);
-            String book_name = jsonObject.getString("book_name");
+            String book_id = jsonObject.getString("book_id");
             String text = jsonObject.getString("text");
             Integer limit = jsonObject.getInteger("limit");
             Integer minDistance = jsonObject.getInteger("minDistance");
 
-            return sendMes(bookService.searchBookContent(book_name, text, limit, minDistance));
+            return sendMes(bookService.searchBookContent(book_id, text, limit, minDistance));
         } catch (Exception e) {
             log.error("Search book content error: {}", e.getMessage());
             return sendErr();

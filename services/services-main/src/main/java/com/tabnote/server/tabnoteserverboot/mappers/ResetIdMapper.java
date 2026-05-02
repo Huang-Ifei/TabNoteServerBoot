@@ -44,4 +44,10 @@ public interface ResetIdMapper {
     void updateLCId(@Param("oldId") String oldId, @Param("newId") String newId);
     @Update("UPDATE  consumption_history SET  usr_id= #{newId} WHERE usr_id=#{oldId}")
     void updateCHId(@Param("oldId") String oldId, @Param("newId") String newId);
+    @Update("UPDATE  books SET usr_id= #{newId} WHERE usr_id=#{oldId}")
+    void updateBookId(@Param("oldId") String oldId, @Param("newId") String newId);
+    @Update("UPDATE  teacher SET usr_id= #{newId} WHERE usr_id=#{oldId}")
+    void updateTeacher(@Param("oldId") String oldId, @Param("newId") String newId);
+    @Update("UPDATE  student SET usr_id= #{newId} WHERE usr_id=#{oldId}")
+    void updateStudent(@Param("oldId") String oldId, @Param("newId") String newId);
 }

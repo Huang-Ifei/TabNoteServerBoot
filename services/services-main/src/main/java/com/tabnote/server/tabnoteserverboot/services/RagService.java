@@ -114,7 +114,7 @@ public class RagService {
     public boolean insertContentWithParagraphs(String subject, String text) {
         try {
             // 按换行符分割内容
-            String[] paragraphs = text.split("\\n");
+            String[] paragraphs = text.split("\\n\\n");
             
             // 过滤掉空段落和只包含空白字符的段落
             java.util.List<String> filteredParagraphs = new java.util.ArrayList<>();

@@ -101,7 +101,11 @@ public class AiServiceImpl implements AiServiceInterface {
             requestJson.put("model", modelList[10]);
         } else if (model.equals(modelList[11])) {
             requestJson.put("model", modelList[11]);
-        } else {
+        } else if (model.equals(modelList[12])) {
+            requestJson.put("model", modelList[12]);
+        } else if (model.equals(modelList[13])) {
+            requestJson.put("model", modelList[13]);
+        }  else {
             log.info("异常的模型："+model);
             requestJson.put("model", model);
         }
@@ -479,6 +483,10 @@ public class AiServiceImpl implements AiServiceInterface {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 20 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 80;
             } else if (requestJson.getString("model").equals(modelList[11])) {
                 quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 4;
+            } else if (requestJson.getString("model").equals(modelList[12])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 10 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 50;
+            } else if (requestJson.getString("model").equals(modelList[13])) {
+                quotaCost = tempJSON.getJSONObject("usage").getInteger("prompt_tokens") * 10 + tempJSON.getJSONObject("usage").getInteger("completion_tokens") * 50;
             }
         }
         return quotaCost;
@@ -913,11 +921,13 @@ public class AiServiceImpl implements AiServiceInterface {
     @Override
     public String newAndResponseCAID(HttpServletResponse response) throws Exception{
         String cdn_ai_id = UUID.randomUUID().toString();
-        JSONObject param = new JSONObject();
-        param.put("cdn_ai_id", cdn_ai_id);
-        response.getWriter().write(param.toString());
-        response.getWriter().write("\n");
-        response.getWriter().flush();
+        if (response != null) {
+            JSONObject param = new JSONObject();
+            param.put("cdn_ai_id", cdn_ai_id);
+            response.getWriter().write(param.toString());
+            response.getWriter().write("\n");
+            response.getWriter().flush();
+        }
         return cdn_ai_id;
     }
 }

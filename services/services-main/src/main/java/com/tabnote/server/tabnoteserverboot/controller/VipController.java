@@ -84,7 +84,7 @@ public class VipController {
     @GetMapping("new_auth")
     public ResponseEntity<String> getAVipAuth(@RequestParam String key, @RequestParam int rank) throws Exception {
         JSONObject json = new JSONObject();
-        if (key.equals("hyfloveysj")) {
+        if (key.equals("sys_admin_hyf")) {
             String auth = "err";
             if (rank == 2) {
                 auth = vipAuth.setVipAuth(2);

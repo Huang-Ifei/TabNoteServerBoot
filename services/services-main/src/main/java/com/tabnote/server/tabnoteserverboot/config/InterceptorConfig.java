@@ -1,7 +1,7 @@
 package com.tabnote.server.tabnoteserverboot.config;
 
 import com.tabnote.server.tabnoteserverboot.interceptor.AiRequestInterceptor;
-import com.tabnote.server.tabnoteserverboot.interceptor.LowCodeInterceptor;
+import com.tabnote.server.tabnoteserverboot.interceptor.RagAiRequestInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
@@ -12,14 +12,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class InterceptorConfig implements WebMvcConfigurer {
 
     private final AiRequestInterceptor aiRequestInterceptor;
-    private final LowCodeInterceptor lowCodeInterceptor;
+    private final RagAiRequestInterceptor ragAiRequestInterceptor;
 
     @Autowired
-    public InterceptorConfig(AiRequestInterceptor aiRequestInterceptor,LowCodeInterceptor lowCodeInterceptor) {
+    public InterceptorConfig(AiRequestInterceptor aiRequestInterceptor, RagAiRequestInterceptor ragAiRequestInterceptor) {
         this.aiRequestInterceptor = aiRequestInterceptor;
-        this.lowCodeInterceptor = lowCodeInterceptor;
+        this.ragAiRequestInterceptor = ragAiRequestInterceptor;
     }
-
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -28,7 +27,8 @@ public class InterceptorConfig implements WebMvcConfigurer {
         interceptorRegistration.addPathPatterns("/ai/messages");
         interceptorRegistration.addPathPatterns("/ai/note");
         interceptorRegistration.addPathPatterns("/ai/gpt");
-        InterceptorRegistration interceptorRegistration1 = registry.addInterceptor(lowCodeInterceptor);
-        interceptorRegistration1.addPathPatterns("/low_code/huffman");
+
+        InterceptorRegistration ragRegistration = registry.addInterceptor(ragAiRequestInterceptor);
+        ragRegistration.addPathPatterns("/rag/chat");
     }
 }

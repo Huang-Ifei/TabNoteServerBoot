@@ -26,6 +26,9 @@ public interface VipMapper {
     @Insert("insert vip VALUES (UUID(),#{id},GREATEST(#{startTime}, NOW()),DATE_ADD(GREATEST(#{startTime}, NOW()),INTERVAL 1 MONTH),#{quota},#{rank})")
     void addVip(@Param("id")String id,@Param("startTime")String startTime,@Param("quota")int quota,@Param("rank")int rank);
 
+    @Insert("insert vip VALUES (UUID(),#{id},GREATEST(#{startTime}, NOW()),DATE_ADD(GREATEST(#{startTime}, NOW()),INTERVAL 1 YEAR),#{quota},#{rank})")
+    void addYearlyVip(@Param("id")String id,@Param("startTime")String startTime,@Param("quota")int quota,@Param("rank")int rank);
+
     //升级某月的VIP等级
     @Update("update vip set `rank`=#{rank},`quota`=#{quota} where vip_id = #{vip_id}")
     void updateVipRank(@Param("vip_id")String vip_id,@Param("rank")int rank,@Param("quota")int quota);

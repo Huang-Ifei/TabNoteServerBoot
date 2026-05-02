@@ -110,18 +110,13 @@ public class BookServiceImpl implements BookServiceInterface {
     }
 
     @Override
-    public JSONObject getBookDetail(String book_id, String usr_id) {
+    public JSONObject getBookDetail(String book_id) {
         JSONObject result = new JSONObject();
         try {
             Book book = bookMapper.getBookById(book_id);
             if (book == null) {
                 result.put("success", false);
                 result.put("message", "Book not found");
-                return result;
-            }
-            if (!book.getUsr_id().equals(usr_id)) {
-                result.put("success", false);
-                result.put("message", "Permission denied");
                 return result;
             }
 
@@ -147,20 +142,19 @@ public class BookServiceImpl implements BookServiceInterface {
     }
 
     @Override
-    public JSONObject getBookList(String usr_id, Integer page) {
+    public JSONObject getBookList(Integer index) {
         JSONObject result = new JSONObject();
         try {
-            int offset = (page - 1) * 20;
+            int offset = index;
             int limit = 20;
 
-            List<Book> books = bookMapper.getBooksByUserId(usr_id, offset, limit);
-            int total = bookMapper.countBooksByUserId(usr_id);
-            int totalPages = (int) Math.ceil((double) total / limit);
+            List<Book> books = bookMapper.getBooksByUserId(offset, limit);
 
             JSONArray booksArray = new JSONArray();
             for (Book book : books) {
                 JSONObject bookJson = new JSONObject();
                 bookJson.put("book_id", book.getBook_id());
+                bookJson.put("usr_id", book.getUsr_id());
                 bookJson.put("book_name", book.getBook_name());
                 bookJson.put("author", book.getAuthor());
                 bookJson.put("description", book.getDescription());
@@ -171,10 +165,7 @@ public class BookServiceImpl implements BookServiceInterface {
 
             result.put("success", true);
             result.put("books", booksArray);
-            result.put("total", total);
-            result.put("page", page);
-            result.put("totalPages", totalPages);
-            log.info("Book list retrieved: usr_id={}, page={}", usr_id, page);
+            log.info("Book list retrieved: index={}", index);
         } catch (Exception e) {
             log.error("Get book list failed: {}", e.getMessage());
             result.put("success", false);
@@ -184,14 +175,14 @@ public class BookServiceImpl implements BookServiceInterface {
     }
 
     @Override
-    public JSONObject insertBookContent(String book_id, String book_name, String text) {
+    public JSONObject insertBookContent(String book_id, String text) {
         JSONObject result = new JSONObject();
         try {
-            boolean success = ragService.insertContent(book_name, text);
+            boolean success = ragService.insertContent(book_id, text);
             if (success) {
                 result.put("success", true);
                 result.put("message", "Content inserted to RAG successfully");
-                log.info("Book content inserted to RAG: book_id={}, book_name={}", book_id, book_name);
+                log.info("Book content inserted to RAG: book_id={}", book_id);
             } else {
                 result.put("success", false);
                 result.put("message", "Failed to insert content to RAG");
@@ -205,14 +196,14 @@ public class BookServiceImpl implements BookServiceInterface {
     }
 
     @Override
-    public JSONObject insertBookContentWithParagraphs(String book_id, String book_name, String text) {
+    public JSONObject insertBookContentWithParagraphs(String book_id, String text) {
         JSONObject result = new JSONObject();
         try {
-            boolean success = ragService.insertContentWithParagraphs(book_name, text);
+            boolean success = ragService.insertContentWithParagraphs(book_id, text);
             if (success) {
                 result.put("success", true);
                 result.put("message", "Content inserted to RAG successfully with paragraphs");
-                log.info("Book content inserted to RAG with paragraphs: book_id={}, book_name={}", book_id, book_name);
+                log.info("Book content inserted to RAG with paragraphs: book_id={}", book_id);
             } else {
                 result.put("success", false);
                 result.put("message", "Failed to insert content to RAG");
@@ -226,13 +217,13 @@ public class BookServiceImpl implements BookServiceInterface {
     }
 
     @Override
-    public JSONObject searchBookContent(String book_name, String text, Integer limit, Integer minDistance) {
+    public JSONObject searchBookContent(String book_id, String text, Integer limit, Integer minDistance) {
         JSONObject result = new JSONObject();
         try {
-            JSONObject searchResult = ragService.searchContent(book_name, text, limit != null ? limit : 1000, minDistance != null ? minDistance : 0);
+            JSONObject searchResult = ragService.searchContent(book_id, text, limit != null ? limit : 1000, minDistance != null ? minDistance : 0);
             result.put("success", true);
             result.put("data", searchResult);
-            log.info("Book content searched from RAG: book_name={}", book_name);
+            log.info("Book content searched from RAG: book_name={}", book_id);
         } catch (Exception e) {
             log.error("Search book content from RAG failed: {}", e.getMessage());
             result.put("success", false);

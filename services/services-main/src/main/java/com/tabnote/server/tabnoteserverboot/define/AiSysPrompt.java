@@ -44,4 +44,7 @@ public interface AiSysPrompt {
             "\n" +
             "评分标准：\n" +
             "{{standard}}";
+
+    String ragDialoguePrompt1 = "参考信息";
+    String ragDialoguePrompt2 = "用户请求";
 }

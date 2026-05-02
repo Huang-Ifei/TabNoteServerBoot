@@ -4,10 +4,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
 import com.tabnote.server.tabnoteserverboot.component.TagsListProcess;
-import com.tabnote.server.tabnoteserverboot.mappers.AccountMapper;
-import com.tabnote.server.tabnoteserverboot.mappers.ClassMapper;
-import com.tabnote.server.tabnoteserverboot.mappers.TabNoteMapper;
-import com.tabnote.server.tabnoteserverboot.mappers.VipMapper;
+import com.tabnote.server.tabnoteserverboot.mappers.*;
 import com.tabnote.server.tabnoteserverboot.models.RankAndQuota;
 import com.tabnote.server.tabnoteserverboot.models.TabNote;
 import com.tabnote.server.tabnoteserverboot.models.TabNoteForList;
@@ -35,7 +32,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
     private static final Logger log = LoggerFactory.getLogger(TabNoteServiceImpl.class);
 
     TabNoteMapper tabNoteMapper;
-    ClassMapper classMapper;
+    ClassesMapper classesMapper;
     AccountMapper accountMapper;
     FileServiceInterface fileService;
     LikeCount likeCount;
@@ -49,8 +46,8 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         this.tabNoteMapper = tabNoteMapper;
     }
     @Autowired
-    public void setClassMapper(ClassMapper classMapper) {
-        this.classMapper = classMapper;
+    public void setClassesMapper(ClassesMapper classesMapper) {
+        this.classesMapper = classesMapper;
     }
     @Autowired
     public void setAccountMapper(AccountMapper accountMapper) {
@@ -88,7 +85,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
     public JSONObject getClasses() {
         JSONObject json = new JSONObject();
         try {
-            List<HashMap<String, String>> classes = classMapper.getClasses();
+            List<HashMap<String, String>> classes = classesMapper.getClasses();
             json.putArray("classes");
             for (HashMap<String, String> map : classes) {
                 json.getJSONArray("classes").add(map.get("class_name").toString());
@@ -533,6 +530,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         } catch (Exception e) {
             log.error(e.getMessage());
             returnJSON.put("response", "failed");
+            throw e;
         }
         return returnJSON;
     }
@@ -581,6 +579,7 @@ public class TabNoteServiceImpl implements TabNoteServiceInterface {
         } catch (Exception e) {
             log.error(e.getMessage());
             returnJSON.put("response", "failed");
+            throw e;
         }
         return returnJSON;
     }

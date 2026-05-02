@@ -14,17 +14,17 @@ public interface BookMapper {
     @Delete("delete from books where book_id = #{0}")
     void deleteBook(@Param("0") String book_id);
 
-    @Update("update books set book_name = #{1}, author = #{2}, description = #{3}, cover_image = #{4}, update_time = #{5} where book_id = #{0}")
+    @Update("update books set book_name = #{1}, author = #{2}, description = #{3}, cover_image = #{4}, update_time = now() where book_id = #{0}")
     void updateBook(@Param("0") String book_id, @Param("1") String book_name, @Param("2") String author, @Param("3") String description, @Param("4") String cover_image, @Param("5") String update_time);
 
     @Select("select * from books where book_id = #{0}")
     Book getBookById(@Param("0") String book_id);
 
-    @Select("select * from books where usr_id = #{usr_id} order by create_time desc limit #{limit} offset #{offset}")
-    List<Book> getBooksByUserId(@Param("usr_id") String usr_id, @Param("offset") int offset, @Param("limit") int limit);
+    @Select("select * from books order by create_time desc limit #{limit} offset #{offset}")
+    List<Book> getBooksByUserId(@Param("offset") int offset, @Param("limit") int limit);
 
-    @Select("select count(*) from books where usr_id = #{usr_id}")
-    Integer countBooksByUserId(@Param("usr_id") String usr_id);
+    @Select("select count(*) from books")
+    Integer countBooksByUserId();
 
     @Select("select count(*) from books")
     Integer getTotalBookCount();

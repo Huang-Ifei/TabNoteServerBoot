@@ -80,6 +80,11 @@ public class AccountController {
         int mesType = jsonObject.getIntValue("mesType");
         if (mesType == MesType.signUp) {
             log.info("MesType.signUp:" + tabNoteInfiniteEncryption.proxyGetIp(request));
+            if (jsonObject.getString("id").startsWith("stu_")){
+                JSONObject jsonObject1 = new JSONObject();
+                jsonObject1.put("response", "stu_开头的id段暂不开放给普通用户注册");
+                return this.sendMes(jsonObject1);
+            }
             return this.sendMes(accountService.signUp(jsonObject.getString("id"),jsonObject.getString("password"),jsonObject.getString("name"),tabNoteInfiniteEncryption.proxyGetIp(request)));
         } else if (mesType == MesType.logIn) {
             log.info("MesType.logIn:" + tabNoteInfiniteEncryption.proxyGetIp(request));

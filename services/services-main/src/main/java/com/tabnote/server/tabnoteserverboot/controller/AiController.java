@@ -193,89 +193,89 @@ public class AiController {
             cdnai.newTACADS(ca_id);
             //初始化
             StringBuffer answer = new StringBuffer();
-            String hitDataId = "";
+//            String hitDataId = "";
             int qC1 = 0;
 
             //AAM以及AM工作流
             if (model.equals("AAM") || model.equals("AM")) {
                 log.info("BQ执行:" + model);
-                StringBuffer sb = new StringBuffer();
+//                StringBuffer sb = new StringBuffer();
                 //如果text为空那么就会进行识别，并且进行缓存查找，如果缓存被判定为命中，则返回缓存命中标准格式给客户端，如果不为空直接使用客户端发上来的text跳过识别部分
-                if (bodyJson.getString("text").isEmpty()) {
-                    //如果为缓存不受信状态会有text，缓存受信则不会发送信息，第一次则text为空
-                    //如果是第一次发送请求则进行标准操作OCR识别
-                    bodyJson.put("text", ocr.getOCR(bodyJson.getString("imgHigh")));
-
-                    //将请求JSON变为向API发送的JSON（识别图片内容）
-                    JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[9],AiSysPrompt.defaultPrompt);
-
-                    try {
-                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
-                    } catch (Exception e) {
-                        log.error("gpt-4o识别出错了!!");
-                        log.error(e.getMessage());
-                    }
-                    //没成功重试一下
-                    if (qC1 == 0 || sb.isEmpty()) {
-                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
-                    }
-                    log.info("BQ结果："+sb);
-                    bodyJson.put("text",sb.toString());
-                    hitDataId = tabNoteDefinitelyVectorCache.getBQVectorCache(bodyJson.getString("text"));
-                }else{
-                    sb.append(bodyJson.getString("text"));
-                    aiMapper.deleteBQByText(bodyJson.getString("id"),bodyJson.getString("text"));
-                }
+//                if (bodyJson.getString("text").isEmpty()) {
+//                    //如果为缓存不受信状态会有text，缓存受信则不会发送信息，第一次则text为空
+//                    //如果是第一次发送请求则进行标准操作OCR识别
+//                    bodyJson.put("text", ocr.getOCR(bodyJson.getString("imgHigh")));
+//
+//                    //将请求JSON变为向API发送的JSON（识别图片内容）
+//                    JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "latex"), modelList[9],AiSysPrompt.defaultPrompt);
+//
+//                    try {
+//                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
+//                    } catch (Exception e) {
+//                        log.error("gpt-4o识别出错了!!");
+//                        log.error(e.getMessage());
+//                    }
+//                    //没成功重试一下
+//                    if (qC1 == 0 || sb.isEmpty()) {
+//                        qC1 = aiService.postAiMessagesToChatGPTAPI(requestJson, null, sb,"");
+//                    }
+//                    log.info("BQ结果："+sb);
+//                    bodyJson.put("text",sb.toString());
+////                    hitDataId = tabNoteDefinitelyVectorCache.getBQVectorCache(bodyJson.getString("text"));
+//                }else{
+//                    sb.append(bodyJson.getString("text"));
+//                    aiMapper.deleteBQByText(bodyJson.getString("id"),bodyJson.getString("text"));
+//                }
 
                 //判断hit非空则执行hit操作，找到目标则不修改hit为空，没找到缓存id的数据库字段则修改hit为空
-                if(!hitDataId.isEmpty()){
-                    if(!aiService.returnVector(response,hitDataId,bodyJson.getString("text"),answer)){
-                        hitDataId="";
-                    }else{
-                        quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1);
-                    }
-                }
+//                if(!hitDataId.isEmpty()){
+//                    if(!aiService.returnVector(response,hitDataId,bodyJson.getString("text"),answer)){
+//                        hitDataId="";
+//                    }else{
+//                        quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1);
+//                    }
+//                }
 
-                //以下操作先判断hit为空操作
-                if(hitDataId.isEmpty()){
-                    //通过识别出来的内容构建O1格式的JSON
-                    JSONArray rqArray = aiService.buildO1Message(sb);
-                    int qC2 = 0;
-
-                    //尝试硅基流动API
-                    if (answer.isEmpty()) {
-                        try {
-                            if (!sb.isEmpty()) {
-                                log.info("使用Silicon DeepSeek API");
-                                qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4],AiSysPrompt.defaultPrompt), response, answer,ca_id);
-                            }
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                    }
-                    //DeepSeek解题成功
-                    if (!answer.isEmpty() || qC2 != 0) {
-                        log.info("扣费：gpt4o用于识别："+qC1+"；deepSeek用于解题："+qC2);
-                        quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1 + qC2);
-                    } else {
-                        JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8],AiSysPrompt.defaultPrompt);
-
-                        //抄送给API
-                        int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer,ca_id);
-                        log.info("BQ DeepSeek结题结果："+answer);
-                        response.getWriter().write("");
-                        response.getWriter().flush();
-                        log.info("扣费：gpt4o用于识别："+qC1+"（这一费用用户不承担）；gpt4o用于解题："+quotaCost);
-                        quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
-                    }
-                }
+//                //以下操作先判断hit为空操作
+//                if(hitDataId.isEmpty()){
+//                    //通过识别出来的内容构建O1格式的JSON
+//                    JSONArray rqArray = aiService.buildO1Message(sb);
+//                    int qC2 = 0;
+//
+//                    //尝试硅基流动API
+//                    if (answer.isEmpty()) {
+//                        try {
+//                            if (!sb.isEmpty()) {
+//                                log.info("使用Silicon DeepSeek API");
+//                                qC2 = aiService.postAiMessagesToDeepSeekAPI(aiService.buildChatGPTRequestJSON(rqArray, modelList[4],AiSysPrompt.defaultPrompt), response, answer,ca_id);
+//                            }
+//                        } catch (Exception ex) {
+//                            ex.printStackTrace();
+//                        }
+//                    }
+//                    //DeepSeek解题成功
+//                    if (!answer.isEmpty() || qC2 != 0) {
+//                        log.info("扣费：gpt4o用于识别："+qC1+"；deepSeek用于解题："+qC2);
+//                        quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), qC1 + qC2);
+//                    } else {
+//                        JSONObject requestJSON = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8],AiSysPrompt.defaultPrompt);
+//
+//                        //抄送给API
+//                        int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJSON, response, answer,ca_id);
+//                        log.info("BQ DeepSeek结题结果："+answer);
+//                        response.getWriter().write("");
+//                        response.getWriter().flush();
+//                        log.info("扣费：gpt4o用于识别："+qC1+"（这一费用用户不承担）；gpt4o用于解题："+quotaCost);
+//                        quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
+//                    }
+//                }
             }
 
-            //如果不是AAM、AM或者出现了超时未解答的问题，使用基础的4o/4.1模型可以识别图片直接执行
-            if (answer.isEmpty() && hitDataId.isEmpty()) {
+            //如果不是AAM、AM或者出现了超时未解答的问题，使用5.4模型可以识别图片直接执行
+//            if (answer.isEmpty() && hitDataId.isEmpty()) {
                 log.info("直接解题");
                 //将请求JSON变为向API发送的JSON
-                JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[8],AiSysPrompt.defaultPrompt);
+                JSONObject requestJson = aiService.buildChatGPTRequestJSON(aiService.buildBQImgRequestToJSONArray(bodyJson, "solve"), modelList[12],AiSysPrompt.defaultPrompt);
 
                 //抄送给API
                 int quotaCost = 0;
@@ -285,13 +285,13 @@ public class AiController {
                     log.error(e.getMessage());
                 }
 
-                log.info("GPT4o直接解题结果："+answer);
+                log.info("GPT5.4直接解题结果："+answer);
                 response.getWriter().write("");
                 response.getWriter().flush();
 
-                log.info("扣费：仅GPT4o，gpt4o用于解题："+quotaCost);
+                log.info("扣费：仅GPT5.4，gpt5.4用于解题："+quotaCost);
                 quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
-            }
+//            }
 
             //加入历史
             BQ bq = new BQ();

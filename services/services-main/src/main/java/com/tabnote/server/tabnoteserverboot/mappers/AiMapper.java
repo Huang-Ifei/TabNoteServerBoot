@@ -49,4 +49,20 @@ public interface AiMapper {
 
     @Select("SELECT * FROM beat_questions WHERE bq_id=#{bqId}")
     BQ getBQOnlyById( @Param("bqId") String bqId);
+
+    @Insert("INSERT INTO rag_ai_messages (rag_ms_id, book_id, mainly, usr_id, contents, date_time) VALUES (#{rag_ms_id}, #{book_id}, #{mainly}, #{usr_id}, #{contents}, #{date_time})")
+    void addRagAiMessages(@Param("rag_ms_id") String rag_ms_id, @Param("book_id") String book_id, @Param("mainly") String mainly, @Param("usr_id") String usr_id, @Param("contents") String contents, @Param("date_time") String date_time);
+
+    @Update("UPDATE rag_ai_messages SET contents=#{contents} ,date_time=#{date_time} WHERE rag_ms_id=#{rag_ms_id}")
+    void updateRagAiMessages(@Param("rag_ms_id") String rag_ms_id, @Param("contents") String contents, @Param("date_time") String date_time);
+
+
+    @Select("SELECT rag_ms_id, book_id, mainly, date_time FROM rag_ai_messages WHERE usr_id = #{usr_id} ORDER BY date_time DESC LIMIT 500")
+    List<RagAiMessagesForList> getRagAiList(@Param("usr_id") String usr_id);
+
+    @Select("SELECT rag_ms_id, book_id, mainly, date_time FROM rag_ai_messages WHERE usr_id = #{usr_id} AND book_id = #{book_id} ORDER BY date_time DESC LIMIT 500")
+    List<RagAiMessagesForList> getRagAiListByBookId(@Param("usr_id") String usr_id, @Param("book_id") String book_id);
+
+    @Select("SELECT * FROM rag_ai_messages WHERE rag_ms_id = #{rag_ms_id}")
+    RagAiMessages getRagAiMessages(@Param("rag_ms_id") String rag_ms_id);
 }

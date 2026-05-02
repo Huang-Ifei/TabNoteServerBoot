@@ -303,6 +303,9 @@ public class AccountServiceImpl implements AccountServiceInterface {
                 resetIdMapper.updateVIPId(id,new_id);
                 resetIdMapper.updateLCId(id,new_id);
                 resetIdMapper.updateCHId(id,new_id);
+                resetIdMapper.updateBookId(id,new_id);
+                resetIdMapper.updateTeacher(id,new_id);
+                resetIdMapper.updateStudent(id,new_id);
 
                 File accountImg = new File("accountImg/"+id+".jpg");
                 if (accountImg.exists()){

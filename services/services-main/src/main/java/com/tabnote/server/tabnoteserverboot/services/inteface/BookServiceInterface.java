@@ -11,13 +11,13 @@ public interface BookServiceInterface {
 
     JSONObject updateBook(String book_id, String usr_id, String book_name, String author, String description, String cover_image);
 
-    JSONObject getBookDetail(String book_id, String usr_id);
+    JSONObject getBookDetail(String book_id);
 
-    JSONObject getBookList(String usr_id, Integer page);
+    JSONObject getBookList(Integer index);
 
-    JSONObject insertBookContent(String book_id, String book_name, String text);
+    JSONObject insertBookContent(String book_id, String text);
 
-    JSONObject insertBookContentWithParagraphs(String book_id, String book_name, String text);
+    JSONObject insertBookContentWithParagraphs(String book_id, String text);
 
-    JSONObject searchBookContent(String book_name, String text, Integer limit, Integer minDistance);
+    JSONObject searchBookContent(String book_id, String text, Integer limit, Integer minDistance);
 }
