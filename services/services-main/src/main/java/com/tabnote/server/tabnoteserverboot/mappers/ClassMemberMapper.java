@@ -31,7 +31,7 @@ public interface ClassMemberMapper {
     @Update("update class_student set role = #{2} where class_id = #{0} and student_id = #{1}")
     void updateStudentRole(@Param("0") String class_id, @Param("1") String student_id, @Param("2") String role);
 
-    @Select("select s.*, cs.role, cs.join_time, u.name as user_name from student s inner join class_student cs on s.student_id = cs.student_id left join user u on s.usr_id = u.id where cs.class_id = #{0}")
+    @Select("select s.*, cs.role, cs.join_time, u.name as user_name from student s inner join class_student cs on s.student_id = cs.student_id left join user u on s.usr_id = u.id where cs.class_id = #{0} order by student_no asc")
     List<HashMap<String, String>> getStudentsByClassId(@Param("0") String class_id);
 
     @Select("select c.*, cs.role, cs.join_time from class c inner join class_student cs on c.class_id = cs.class_id where cs.student_id = #{0}")

@@ -27,6 +27,7 @@ public class InterceptorConfig implements WebMvcConfigurer {
         interceptorRegistration.addPathPatterns("/ai/messages");
         interceptorRegistration.addPathPatterns("/ai/note");
         interceptorRegistration.addPathPatterns("/ai/gpt");
+        interceptorRegistration.addPathPatterns("/homeworkManage/learningAnalysis");
 
         InterceptorRegistration ragRegistration = registry.addInterceptor(ragAiRequestInterceptor);
         ragRegistration.addPathPatterns("/rag/chat");

@@ -78,7 +78,7 @@ public class RagService {
     public JSONObject searchContent(String subject, String text, int limit, int minDistance) {
         try {
             String url = getRagBaseUrl() + "/basic/select";
-            
+
             JSONObject requestBody = new JSONObject();
             requestBody.put("subject", subject);
             requestBody.put("text", text);
@@ -91,7 +91,7 @@ public class RagService {
             HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
 
             ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-            
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 log.info("RAG search successful for subject: {}", subject);
                 return JSONObject.parseObject(response.getBody());
@@ -106,6 +106,40 @@ public class RagService {
             log.error("RAG search error for subject: {}, error: {}", subject, e.getMessage());
             JSONObject errorResult = new JSONObject();
             errorResult.put("success", false);
+            errorResult.put("message", e.getMessage());
+            return errorResult;
+        }
+    }
+
+    public JSONObject searchContentBatch(String subject, java.util.List<String> texts, int limit, double minDistance) {
+        try {
+            String url = getRagBaseUrl() + "/basic/select/batch";
+
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("subject", subject);
+            requestBody.put("texts", texts);
+            requestBody.put("limit", limit);
+            requestBody.put("minDistance", minDistance);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                log.info("RAG batch search successful for subject: {}, texts: {}", subject, texts.size());
+                return JSONObject.parseObject(response.getBody());
+            } else {
+                log.error("RAG batch search failed for subject: {}, status: {}", subject, response.getStatusCode());
+                JSONObject errorResult = new JSONObject();
+                errorResult.put("message", "failed");
+                return errorResult;
+            }
+        } catch (Exception e) {
+            log.error("RAG batch search error for subject: {}, error: {}", subject, e.getMessage());
+            JSONObject errorResult = new JSONObject();
             errorResult.put("message", e.getMessage());
             return errorResult;
         }

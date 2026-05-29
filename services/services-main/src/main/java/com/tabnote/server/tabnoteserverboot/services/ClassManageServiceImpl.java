@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.Cipher;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.KeyFactory;
@@ -870,7 +871,7 @@ public class ClassManageServiceImpl implements ClassManageServiceInterface {
                 return result;
             }
 
-            Workbook workbook = WorkbookFactory.create(new java.io.ByteArrayInputStream(excelBytes));
+            Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(excelBytes));
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet.getPhysicalNumberOfRows() < 2) {
                 workbook.close();

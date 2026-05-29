@@ -21,9 +21,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.UUID;
@@ -135,9 +137,8 @@ public class AiController {
             cdnai.newTACADS(ca_id);
 
             //抄送给API
-            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
+            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb, ca_id, bodyJson.getString("ai_ms_id") != null ? bodyJson.getString("ai_ms_id") : "");
             log.info("Note AI结果："+sb);
-            response.getWriter().write("");
             response.getWriter().flush();
 
             quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
@@ -165,9 +166,8 @@ public class AiController {
             String ca_id = aiService.newAndResponseCAID(response);
             cdnai.newTACADS(ca_id);
             //抄送给API
-            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
+            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb, ca_id, bodyJson.getString("ai_ms_id") != null ? bodyJson.getString("ai_ms_id") : "");
             log.info("GPT AI结果："+sb);
-            response.getWriter().write("");
             response.getWriter().flush();
 
             quotaDeductionPublisher.quotaCost(bodyJson.getString("id"), quotaCost);
@@ -280,7 +280,7 @@ public class AiController {
                 //抄送给API
                 int quotaCost = 0;
                 try {
-                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer,ca_id);
+                    quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, answer, ca_id, "");
                 } catch (Exception e) {
                     log.error(e.getMessage());
                 }
@@ -335,7 +335,7 @@ public class AiController {
             JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, model,AiSysPrompt.defaultPrompt);
             StringBuffer sb = new StringBuffer();
             //抄送给API
-            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb,ca_id);
+            int quotaCost = aiService.postAiMessagesToChatGPTAPI(requestJson, response, sb, ca_id, bodyJson.getString("ai_ms_id") != null ? bodyJson.getString("ai_ms_id") : "");
             log.info("messages接口结果："+sb);
             response.getWriter().write("");
             response.getWriter().flush();
@@ -496,5 +496,29 @@ public class AiController {
 
     private ResponseEntity<String> sendMes(JSONObject sendJSON) {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(sendJSON.toString());
+    }
+
+    @GetMapping("cacheAndDelivery")
+    public ResponseEntity<String> getCdnAiData(@RequestParam String cdn_ai_id, @RequestParam int index) {
+        log.info("CDNAI get: cdn_ai_id={}, index={}", cdn_ai_id, index);
+        try {
+            String str = cdnai.getByIndex(cdn_ai_id, index);
+            if (str == null) {
+                JSONObject errResult = new JSONObject();
+                errResult.put("response", "index Error");
+                errResult.put("cdn_ai_id", cdn_ai_id);
+                errResult.put("index", index);
+                return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(errResult.toString());
+            }
+            JSONObject result = new JSONObject();
+            result.put("response", "ok");
+            result.put("cdn_ai_id", cdn_ai_id);
+            result.put("index", index);
+            result.put("str", str);
+            return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(result.toString());
+        } catch (Exception e) {
+            log.error("CDNAI get error: {}", e.getMessage());
+            return sendErr();
+        }
     }
 }

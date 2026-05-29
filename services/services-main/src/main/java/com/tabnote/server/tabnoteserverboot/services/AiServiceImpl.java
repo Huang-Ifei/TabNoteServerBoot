@@ -105,12 +105,14 @@ public class AiServiceImpl implements AiServiceInterface {
             requestJson.put("model", modelList[12]);
         } else if (model.equals(modelList[13])) {
             requestJson.put("model", modelList[13]);
-        }  else {
+        } else if (model.equals(modelList[14])) {
+            requestJson.put("model", modelList[14]);
+        }else {
             log.info("异常的模型："+model);
             requestJson.put("model", model);
         }
 
-        if (model.equals(modelList[3]) || model.equals(modelList[4]) || model.equals(modelList[7]) || model.equals(modelList[11])) {
+        if (model.equals(modelList[3]) || model.equals(modelList[4]) || model.equals(modelList[7]) || model.equals(modelList[11]) || model.equals(modelList[14])) {
             //deepseek流式传输+使用显示
             requestJson.put("stream", true);
             requestJson.put("include_usage", true);
@@ -195,10 +197,10 @@ public class AiServiceImpl implements AiServiceInterface {
 
     //抄送给DEEPSEEK API
     @Override
-    public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String ca_id) throws Exception {
+    public int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString, String ca_id, String ai_ms_id) throws Exception {
         String url = "https://api.deepseek.com/chat/completions";
 
-        if (requestJson.getString("model").equals(modelList[4]) || requestJson.getString("model").equals(modelList[7])|| requestJson.getString("model").equals(modelList[11])) {
+        if (requestJson.getString("model").equals(modelList[4]) || requestJson.getString("model").equals(modelList[7])|| requestJson.getString("model").equals(modelList[11]) || requestJson.getString("model").equals(modelList[14])) {
             url = "https://api.siliconflow.cn/v1/chat/completions";
         }
 
@@ -222,7 +224,7 @@ public class AiServiceImpl implements AiServiceInterface {
 
         if (requestJson.getString("model").equals(modelList[3])) {
             connection.setRequestProperty("Authorization", "Bearer " + DEEPSEEK_API_KEY);
-        } else if (requestJson.getString("model").equals(modelList[4])) {
+        } else {
             connection.setRequestProperty("Authorization", "Bearer " + siliconFlowDeepSeek_API_KEY);
         }
         os = connection.getOutputStream();
@@ -263,7 +265,7 @@ public class AiServiceImpl implements AiServiceInterface {
                             try {
                                 JSONArray choices = tempJSON.getJSONArray("choices");
                                 //如果choices是空的，那么这就是最后一个计数条计算quota
-                                if (choices.isEmpty()) {
+                                if (choices == null || choices.isEmpty()) {
                                     quotaCost = countQuota(tempJSON, requestJson);
                                 } else {
                                     //找到回报的信息
@@ -281,6 +283,9 @@ public class AiServiceImpl implements AiServiceInterface {
                                             returnMessage.put("reasoning_content", thinkingMess);
                                         }
                                         returnJSON.put("message", returnMessage);
+                                        returnJSON.put("response","stream");
+                                        returnJSON.put("ai_ms_id", ai_ms_id);
+                                        returnJSON.put("cdn_ai_id", ca_id);
                                         //如果usage不等于null就可以计算quota了
                                         quotaCost = countQuota(tempJSON, requestJson);
                                         //把封装好的JSON送回
@@ -298,7 +303,13 @@ public class AiServiceImpl implements AiServiceInterface {
                 }
                 //把封装好的JSON送回
                 if (response != null) {
-                    write("{\"response\":\"success\"}",ca_id,response);
+                    JSONObject endJson = new JSONObject();
+                    endJson.put("ai_ms_id", ai_ms_id);
+                    endJson.put("cdn_ai_id", ca_id);
+                    endJson.put("model", null);
+                    endJson.put("message", null);
+                    endJson.put("response", "success");
+                    write(endJson.toString(), ca_id, response);
                 }
                 br.close();
                 return quotaCost;
@@ -316,8 +327,11 @@ public class AiServiceImpl implements AiServiceInterface {
             returnMessage.put("content", "failed" + connection.getResponseCode());
             returnJSON.put("model", requestJson.getString("model"));
             returnJSON.put("message", returnMessage);
+            returnJSON.put("response","stream");
+            returnJSON.put("ai_ms_id", ai_ms_id);
+            returnJSON.put("cdn_ai_id", ca_id);
             if (response != null) {
-                write(requestJson.toString(),ca_id,response);
+                write(returnJSON.toString(),ca_id,response);
             }
         }
         return 0;
@@ -325,7 +339,7 @@ public class AiServiceImpl implements AiServiceInterface {
 
     //抄送给ChatGPT API
     @Override
-    public int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String ca_id) throws Exception {
+    public int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString, String ca_id, String ai_ms_id) throws Exception {
         String url = "https://api.openai.com/v1/chat/completions";
         String gateWayUrl = tabNoteMixGateway.getGateWayHost();
         if (!gateWayUrl.isEmpty()) {
@@ -387,7 +401,7 @@ public class AiServiceImpl implements AiServiceInterface {
                             try {
                                 JSONArray choices = tempJSON.getJSONArray("choices");
                                 //如果choices是空的，那么这就是最后一个计数条计算quota
-                                if (choices.isEmpty()) {
+                                if (choices == null || choices.isEmpty()) {
                                     quotaCost = countQuota(tempJSON, requestJson);
                                 } else {
                                     //找到回报的信息
@@ -397,6 +411,9 @@ public class AiServiceImpl implements AiServiceInterface {
                                         returnJSON.put("model", requestJson.getString("model"));
                                         returnMessage.put("content", returnMess);
                                         returnJSON.put("message", returnMessage);
+                                        returnJSON.put("response","stream");
+                                        returnJSON.put("ai_ms_id", ai_ms_id);
+                                        returnJSON.put("cdn_ai_id", ca_id);
                                         //添加到string buffer里面
                                         returnString.append(returnMess);
                                         //如果usage不等于null就可以计算quota了
@@ -417,7 +434,13 @@ public class AiServiceImpl implements AiServiceInterface {
                 }
                 //把封装好的JSON送回
                 if (response != null) {
-                    write("{\"response\":\"success\"}",ca_id,response);
+                    JSONObject endJson = new JSONObject();
+                    endJson.put("ai_ms_id", ai_ms_id);
+                    endJson.put("cdn_ai_id", ca_id);
+                    endJson.put("model", null);
+                    endJson.put("message", null);
+                    endJson.put("response", "success");
+                    write(endJson.toString(), ca_id, response);
                 }
                 br.close();
                 return quotaCost;
@@ -435,8 +458,11 @@ public class AiServiceImpl implements AiServiceInterface {
             returnMessage.put("content", "failed" + connection.getResponseCode());
             returnJSON.put("model", requestJson.getString("model"));
             returnJSON.put("message", returnMessage);
+            returnJSON.put("response","stream");
+            returnJSON.put("ai_ms_id", ai_ms_id);
+            returnJSON.put("cdn_ai_id", ca_id);
             if (response != null) {
-                write(requestJson.toString(),ca_id,response);
+                write(returnJSON.toString(),ca_id,response);
             }
         }
         return 0;

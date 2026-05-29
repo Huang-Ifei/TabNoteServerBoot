@@ -3,6 +3,8 @@ package com.tabnote.server.tabnoteserverboot.services;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
+import com.tabnote.server.tabnoteserverboot.define.AiInfo;
+import com.tabnote.server.tabnoteserverboot.define.AiSysPrompt;
 import com.tabnote.server.tabnoteserverboot.mappers.*;
 import com.tabnote.server.tabnoteserverboot.models.Homework;
 import com.tabnote.server.tabnoteserverboot.models.HomeworkAnswer;
@@ -10,6 +12,7 @@ import com.tabnote.server.tabnoteserverboot.models.HomeworkQuestion;
 import com.tabnote.server.tabnoteserverboot.models.HomeworkSubmission;
 import com.tabnote.server.tabnoteserverboot.models.Student;
 import com.tabnote.server.tabnoteserverboot.models.Teacher;
+import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import com.tabnote.server.tabnoteserverboot.services.inteface.HomeworkService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,10 +20,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class HomeworkServiceImpl implements HomeworkService {
@@ -50,6 +57,9 @@ public class HomeworkServiceImpl implements HomeworkService {
 
     @Autowired
     private TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
+
+    @Autowired
+    private AiServiceInterface aiService;
 
     private JSONObject tokenFailed() {
         JSONObject result = new JSONObject();
@@ -577,6 +587,40 @@ public class HomeworkServiceImpl implements HomeworkService {
         return result;
     }
 
+    private Double aiGrade(HomeworkQuestion question, String studentAnswer) {
+        try {
+            String prompt = AiSysPrompt.commentPrompt
+                    .replace("${maxScore}", String.valueOf(question.getScore()))
+                    .replace("${question}", question.getContent())
+                    .replace("${answer}", studentAnswer)
+                    .replace("${standard}", question.getAnswer() != null ? question.getAnswer() : "")
+                    .replace("%{maxScore}", String.valueOf(BigDecimal.valueOf(question.getScore())));
+
+            JSONArray messages = new JSONArray();
+            JSONObject userMsg = new JSONObject();
+            userMsg.put("role", "user");
+            userMsg.put("content", prompt);
+            messages.add(userMsg);
+
+            JSONObject requestJson = aiService.buildChatGPTRequestJSON(messages, AiInfo.modelList[14], AiSysPrompt.commentSysPrompt);
+            StringBuffer sb = new StringBuffer();
+            aiService.postAiMessagesToDeepSeekAPI(requestJson, null, sb, UUID.randomUUID().toString(), "");
+
+            String aiResponse = sb.toString().trim();
+            JSONObject gradeResult = JSONObject.parseObject(aiResponse);
+            if (gradeResult != null && gradeResult.containsKey("score")) {
+                Double score = gradeResult.getDouble("score");
+                if (score != null) {
+                    score = Math.max(0, Math.min(score, question.getScore()));
+                }
+                return score;
+            }
+        } catch (Exception e) {
+            log.error("AI grading failed for question {}: {}", question.getQuestion_id(), e.getMessage());
+        }
+        return null;
+    }
+
     // ==================== 学生端 ====================
 
     @Override
@@ -644,18 +688,61 @@ public class HomeworkServiceImpl implements HomeworkService {
                 Integer isCorrect = null;
 
                 HomeworkQuestion question = homeworkQuestionMapper.getQuestionById(question_id);
-                if (question != null && ("single_choice".equals(question.getType()) || "multiple_choice".equals(question.getType()))) {
-                    if (question.getAnswer() != null) {
-                        String correctAnswer = question.getAnswer().trim();
-                        if (correctAnswer.equals(student_answer)) {
-                            score = question.getScore();
-                            isCorrect = 1;
-                        } else {
-                            score = 0.0;
-                            isCorrect = 0;
+                if (question != null) {
+                    if ("single_choice".equals(question.getType())) {
+                        if (question.getAnswer() != null) {
+                            String correctAnswer = question.getAnswer().trim();
+                            if (correctAnswer.equals(student_answer)) {
+                                score = question.getScore();
+                                isCorrect = 1;
+                            } else {
+                                score = 0.0;
+                                isCorrect = 0;
+                            }
+                        }
+                        autoGradedCount++;
+                    } else if ("multiple_choice".equals(question.getType())) {
+                        if (question.getAnswer() != null && student_answer != null) {
+                            String correctAnswer = question.getAnswer().trim();
+                            if (correctAnswer.equals(student_answer.trim())) {
+                                score = question.getScore();
+                                isCorrect = 1;
+                            } else {
+                                java.util.Set<String> correctSet = new java.util.HashSet<>(Arrays.asList(correctAnswer.split(",")));
+                                java.util.Set<String> studentSet = new java.util.HashSet<>(Arrays.asList(student_answer.trim().split(",")));
+                                if (correctSet.containsAll(studentSet)) {
+                                    score = question.getScore() / 2.0;
+                                    isCorrect = 0;
+                                } else {
+                                    score = 0.0;
+                                    isCorrect = 0;
+                                }
+                            }
+                        }
+                        autoGradedCount++;
+                    } else if ("fill_blank".equals(question.getType())) {
+                        if (question.getAnswer() != null && student_answer != null) {
+                            String normalizedCorrect = question.getAnswer().trim()
+                                    .replaceAll("[\\s，。、,.;；：:]", "");
+                            String normalizedStudent = student_answer.trim()
+                                    .replaceAll("[\\s，。、,.;；：:]", "");
+                            if (normalizedCorrect.equalsIgnoreCase(normalizedStudent)) {
+                                score = question.getScore();
+                                isCorrect = 1;
+                            } else {
+                                score = 0.0;
+                                isCorrect = 0;
+                            }
+                        }
+                        autoGradedCount++;
+                    } else if ("code".equals(question.getType()) && 1 == question.getAuto_grading()) {
+                        Double aiScore = aiGrade(question, student_answer);
+                        if (aiScore != null) {
+                            score = aiScore;
+                            isCorrect = aiScore.equals(question.getScore()) ? 1 : 0;
+                            autoGradedCount++;
                         }
                     }
-                    autoGradedCount++;
                 }
 
                 homeworkAnswerMapper.insertAnswer(answer_id, submission_id, question_id, student_answer, score, isCorrect, currentTime, currentTime);
@@ -771,8 +858,10 @@ public class HomeworkServiceImpl implements HomeworkService {
                 aJson.put("question_type", a.getQuestion_type());
                 aJson.put("question_content", a.getQuestion_content());
                 aJson.put("question_options", a.getQuestion_options());
+                aJson.put("question_answer",a.getQuestion_answer());
                 aJson.put("student_answer", a.getStudent_answer());
-                aJson.put("score", a.getScore());
+                aJson.put("score",a.getScore());
+                aJson.put("question_score", a.getQuestion_score());
                 aJson.put("is_correct", a.getIs_correct());
                 answerArray.add(aJson);
             }
@@ -793,5 +882,264 @@ public class HomeworkServiceImpl implements HomeworkService {
             result.put("message", "获取我的提交失败: " + e.getMessage());
         }
         return result;
+    }
+
+    // ==================== 统计 ====================
+
+    @Override
+    public JSONObject homeworkStats(String usr_id, String token, String homework_id) {
+        if (!tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id, token)) {
+            return tokenFailed();
+        }
+        JSONObject result = new JSONObject();
+        try {
+            Homework homework = homeworkMapper.getHomeworkById(homework_id);
+            if (homework == null) {
+                result.put("success", false);
+                result.put("message", "作业不存在");
+                return result;
+            }
+
+            // 获取班级所有学生
+            List<HashMap<String, String>> students = classMemberMapper.getStudentsByClassId(homework.getClass_id());
+            // 获取该作业的所有提交
+            List<HomeworkSubmission> submissions = homeworkSubmissionMapper.getSubmissionsByHomeworkId(homework_id);
+            // 建立student_id -> submission的映射
+            HashMap<String, HomeworkSubmission> submissionMap = new HashMap<>();
+            for (HomeworkSubmission s : submissions) {
+                submissionMap.put(s.getStudent_id(), s);
+            }
+
+            JSONObject homeworkJson = new JSONObject();
+            homeworkJson.put("title", homework.getTitle());
+            homeworkJson.put("total_score", homework.getTotal_score());
+
+            JSONArray categories = new JSONArray();
+            JSONArray series = new JSONArray();
+            JSONObject details = new JSONObject();
+
+            for (HashMap<String, String> stuMap : students) {
+                String name = stuMap.get("user_name") != null ? stuMap.get("user_name") : stuMap.get("usr_id");
+                String studentId = stuMap.get("student_id");
+                String studentNo = stuMap.get("student_no");
+
+                categories.add(name);
+
+                JSONObject bar = new JSONObject();
+                JSONObject detail = new JSONObject();
+                detail.put("student_no", studentNo);
+
+                HomeworkSubmission sub = submissionMap.get(studentId);
+                if (sub != null) {
+                    double score = sub.getTotal_score() != null ? sub.getTotal_score() : 0;
+                    int late = sub.getIs_late() != null ? sub.getIs_late() : 0;
+                    bar.put("value", score);
+                    bar.put("color", getBarColor(score, homework.getTotal_score(), late, 1));
+                    detail.put("score", score);
+                    detail.put("late", late);
+                    detail.put("submitted", 1);
+                } else {
+                    bar.put("value", 0);
+                    bar.put("color", "#909399");
+                    bar.put("score", 0);
+                    bar.put("late", 0);
+                    bar.put("submitted", 0);
+                }
+                series.add(bar);
+                details.put(name, detail);
+            }
+
+            JSONObject chart = new JSONObject();
+            chart.put("categories", categories);
+            chart.put("series", series);
+
+            result.put("success", true);
+            result.put("homework", homeworkJson);
+            result.put("chart", chart);
+            result.put("details", details);
+        } catch (Exception e) {
+            log.error("Homework stats failed: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "获取作业统计失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    @Override
+    public JSONObject classHomeworkStats(String usr_id, String token, String class_id) {
+        if (!tabNoteInfiniteEncryption.encryptionTokenCheckIn(usr_id, token)) {
+            return tokenFailed();
+        }
+        JSONObject result = new JSONObject();
+        try {
+            // 获取班级所有作业（按时间倒序，最新在前）
+            List<Homework> homeworkList = homeworkMapper.getHomeworkListByClassId(class_id, 0, 1000);
+            homeworkList.sort((a, b) -> b.getCreate_time().compareTo(a.getCreate_time()));
+            // 获取班级所有学生
+            List<HashMap<String, String>> students = classMemberMapper.getStudentsByClassId(class_id);
+
+            // 建立student_id -> studentNo/name的映射
+            HashMap<String, String[]> studentInfoMap = new HashMap<>();
+            for (HashMap<String, String> stuMap : students) {
+                String studentId = stuMap.get("student_id");
+                String name = stuMap.get("user_name") != null ? stuMap.get("user_name") : stuMap.get("usr_id");
+                String studentNo = stuMap.get("student_no");
+                studentInfoMap.put(studentId, new String[]{name, studentNo});
+            }
+
+            JSONArray homeworkNames = new JSONArray();
+            JSONArray studentNames = new JSONArray();
+            JSONArray chartData = new JSONArray();
+            JSONArray detailList = new JSONArray();
+
+            for (HashMap<String, String> stuMap : students) {
+                String name = stuMap.get("user_name") != null ? stuMap.get("user_name") : stuMap.get("usr_id");
+                studentNames.add(name);
+            }
+
+            for (int hi = 0; hi < homeworkList.size(); hi++) {
+                Homework hw = homeworkList.get(hi);
+                homeworkNames.add(hw.getTitle());
+
+                List<HomeworkSubmission> submissions = homeworkSubmissionMapper.getSubmissionsByHomeworkId(hw.getHomework_id());
+                HashMap<String, HomeworkSubmission> submissionMap = new HashMap<>();
+                for (HomeworkSubmission s : submissions) {
+                    submissionMap.put(s.getStudent_id(), s);
+                }
+
+                for (int si = 0; si < students.size(); si++) {
+                    String studentId = students.get(si).get("student_id");
+                    String[] info = studentInfoMap.get(studentId);
+
+                    JSONArray bar = new JSONArray();
+                    bar.add(hi);
+                    bar.add(si);
+
+                    JSONObject detail = new JSONObject();
+                    detail.put("hi", hi);
+                    detail.put("si", si);
+                    detail.put("student_no", info[1]);
+                    detail.put("name", info[0]);
+                    detail.put("homework_title", hw.getTitle());
+
+                    HomeworkSubmission sub = submissionMap.get(studentId);
+                    if (sub != null) {
+                        double score = sub.getTotal_score() != null ? sub.getTotal_score() : 0;
+                        int late = sub.getIs_late() != null ? sub.getIs_late() : 0;
+                        bar.add(score);
+                        bar.add(getBarColor(score, hw.getTotal_score(), late, 1));
+                        detail.put("score", score);
+                        detail.put("late", late);
+                        detail.put("submitted", 1);
+                    } else {
+                        bar.add(0);
+                        bar.add("#909399");
+                        detail.put("score", 0);
+                        detail.put("late", 0);
+                        detail.put("submitted", 0);
+                    }
+                    chartData.add(bar);
+                    detailList.add(detail);
+                }
+            }
+
+            result.put("success", true);
+            result.put("homework_names", homeworkNames);
+            result.put("student_names", studentNames);
+            result.put("chart_data", chartData);
+            result.put("detail_list", detailList);
+        } catch (Exception e) {
+            log.error("Class homework stats failed: {}", e.getMessage());
+            result.put("success", false);
+            result.put("message", "获取班级作业统计失败: " + e.getMessage());
+        }
+        return result;
+    }
+
+    public int learningAnalysis(String usr_id, String token, String class_id, String userRequest,
+                                  jakarta.servlet.http.HttpServletResponse response, StringBuffer returnString, String cdn_ai_ms, String ai_ms_id) throws Exception {
+        // 获取班级所有作业
+        List<Homework> homeworkList = homeworkMapper.getHomeworkListByClassId(class_id, 0, 1000);
+        // 获取班级所有学生
+        List<HashMap<String, String>> students = classMemberMapper.getStudentsByClassId(class_id);
+
+        // 构建 studentData 文本
+        StringBuilder studentData = new StringBuilder();
+        // 作业标题和满分
+        studentData.append("作业信息：\n");
+        for (int i = 0; i < homeworkList.size(); i++) {
+            Homework hw = homeworkList.get(i);
+            studentData.append("  第").append(i + 1).append("次作业：").append(hw.getTitle())
+                    .append("（满分").append(hw.getTotal_score()).append("分）\n");
+        }
+        studentData.append("\n");
+
+        // 每个学生的数据
+        studentData.append("学生数据：\n");
+        for (HashMap<String, String> stuMap : students) {
+            String studentId = stuMap.get("student_id");
+            String name = stuMap.get("user_name") != null ? stuMap.get("user_name") : stuMap.get("usr_id");
+            String studentNo = stuMap.get("student_no");
+
+            int submitCount = 0;
+            int lateCount = 0;
+            double totalScore = 0;
+            StringBuilder scoreDetail = new StringBuilder();
+
+            scoreDetail.append("[");
+            for (Homework hw : homeworkList) {
+                HomeworkSubmission sub = homeworkSubmissionMapper.getSubmissionByHomeworkAndStudent(hw.getHomework_id(), studentId);
+                if (sub != null) {
+                    submitCount++;
+                    int late = sub.getIs_late() != null ? sub.getIs_late() : 0;
+                    if (late == 1) {
+                        lateCount++;
+                    }
+                    double score = sub.getTotal_score() != null ? sub.getTotal_score() : 0;
+                    totalScore += score;
+                    scoreDetail.append(hw.getTitle()).append("：").append(score).append("分");
+                    if (late == 1) {
+                        scoreDetail.append("（迟交）");
+                    }
+                    scoreDetail.append("；");
+                } else {
+                    scoreDetail.append(hw.getTitle()).append("：未交；");
+                }
+            }
+            scoreDetail.append("]");
+
+            studentData.append(name).append(" 学号：").append(studentNo)
+                    .append(" 提交").append(submitCount).append("/").append(homeworkList.size()).append("次");
+            if (lateCount > 0) {
+                studentData.append("（迟交").append(lateCount).append("次）");
+            }
+            if (submitCount > 0) {
+                studentData.append(" 平均得分：").append(new DecimalFormat("#.0").format(totalScore / submitCount)).append("分");
+            }
+            studentData.append("。各次作业得分：").append(scoreDetail).append("\n");
+        }
+
+        // 构建提示词
+        String prompt = AiSysPrompt.learningAnalysisPrompt
+                .replace("${studentData}", studentData.toString())
+                .replace("${userRequest}", userRequest);
+
+        // 构建请求JSON
+        JSONObject requestJson = aiService.buildChatGPTRequestJSON(new JSONArray(), AiInfo.modelList[14], AiSysPrompt.learningAnalysisSysPrompt);
+        JSONArray aiMessages = requestJson.getJSONArray("messages");
+        JSONObject userMsg = new JSONObject();
+        userMsg.put("role", "user");
+        userMsg.put("content", prompt);
+        aiMessages.add(userMsg);
+
+        return aiService.postAiMessagesToDeepSeekAPI(requestJson, response, returnString, cdn_ai_ms, ai_ms_id);
+    }
+
+    private String getBarColor(Double score, Double totalScore, int late, int submitted) {
+        if (submitted == 0) return "#909399";
+        if (late == 1) return "#F56C6C";
+        if (totalScore > 0 && score < totalScore * 0.6) return "#E6A23C";
+        if (totalScore > 0 && score >= totalScore * 0.9) return "#409EFF";
+        return "#67C23A";
     }
 }

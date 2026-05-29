@@ -18,10 +18,10 @@ public interface AiServiceInterface {
     JSONArray buildO1Message(StringBuffer sb);
 
     //抄送给DS API
-    int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String cdn_ai_ms) throws Exception;
+    int postAiMessagesToDeepSeekAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString, String cdn_ai_ms, String ai_ms_id) throws Exception;
 
     //抄送给API
-    int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString,String cdn_ai_ms) throws Exception;
+    int postAiMessagesToChatGPTAPI(JSONObject requestJson, HttpServletResponse response, StringBuffer returnString, String cdn_ai_ms, String ai_ms_id) throws Exception;
 
     void write(String s, String ca_id, HttpServletResponse response);
 

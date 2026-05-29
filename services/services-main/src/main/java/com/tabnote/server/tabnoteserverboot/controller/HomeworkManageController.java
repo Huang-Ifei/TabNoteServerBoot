@@ -1,9 +1,12 @@
 package com.tabnote.server.tabnoteserverboot.controller;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.tabnote.server.tabnoteserverboot.component.CDNAI;
 import com.tabnote.server.tabnoteserverboot.component.TabNoteInfiniteEncryption;
+import com.tabnote.server.tabnoteserverboot.services.inteface.AiServiceInterface;
 import com.tabnote.server.tabnoteserverboot.services.inteface.HomeworkService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +24,12 @@ public class HomeworkManageController {
 
     @Autowired
     private HomeworkService homeworkService;
+
+    @Autowired
+    private AiServiceInterface aiService;
+
+    @Autowired
+    private CDNAI cdnai;
 
     @Autowired
     private TabNoteInfiniteEncryption tabNoteInfiniteEncryption;
@@ -275,6 +284,66 @@ public class HomeworkManageController {
             log.error("Get my submission error: {}", e.getMessage());
             return sendErr();
         }
+    }
+
+    // ==================== 统计 ====================
+
+    @PostMapping("homeworkStats")
+    public ResponseEntity<String> homeworkStats(@RequestBody String requestBody, HttpServletRequest request) {
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + " homework_stats");
+        try {
+            JSONObject jsonObject = JSONObject.parseObject(requestBody);
+            String usr_id = jsonObject.getString("usr_id");
+            String token = jsonObject.getString("token");
+
+            return sendMes(homeworkService.homeworkStats(usr_id, token, jsonObject.getString("homework_id")));
+        } catch (Exception e) {
+            log.error("Homework stats error: {}", e.getMessage());
+            return sendErr();
+        }
+    }
+
+    @PostMapping("classHomeworkStats")
+    public ResponseEntity<String> classHomeworkStats(@RequestBody String requestBody, HttpServletRequest request) {
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + " class_homework_stats");
+        try {
+            JSONObject jsonObject = JSONObject.parseObject(requestBody);
+            String usr_id = jsonObject.getString("usr_id");
+            String token = jsonObject.getString("token");
+
+            return sendMes(homeworkService.classHomeworkStats(usr_id, token, jsonObject.getString("class_id")));
+        } catch (Exception e) {
+            log.error("Class homework stats error: {}", e.getMessage());
+            return sendErr();
+        }
+    }
+
+    @PostMapping("learningAnalysis")
+    public void learningAnalysis(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        log.info(tabNoteInfiniteEncryption.proxyGetIp(request) + " learning_analysis");
+        try {
+            JSONObject bodyJson = JSONObject.parseObject((String) request.getAttribute("body"));
+            log.info("learning_analysis收到JSON对象：{}", bodyJson);
+
+            String usr_id = bodyJson.getString("id");
+            String token = bodyJson.getString("token");
+            String class_id = bodyJson.getString("class_id");
+            String userRequest = bodyJson.getString("user_request");
+            //这里不需要这个，默认写一个避免出现麻烦
+            String ai_ms_id = "default";
+
+
+            String ca_id = aiService.newAndResponseCAID(null);
+            cdnai.newTACADS(ca_id);
+
+            StringBuffer sb = new StringBuffer();
+            int quotaCost = homeworkService.learningAnalysis(usr_id, token, class_id, userRequest, response, sb, ca_id, ai_ms_id);
+            log.info("learning_analysis结果：{}", sb);
+        } catch (Exception e) {
+            log.error("Learning analysis error: {}", e.getMessage());
+            aiService.returnErrMess(response, e.toString());
+        }
+        response.getWriter().close();
     }
 
     private ResponseEntity<String> sendErr() {

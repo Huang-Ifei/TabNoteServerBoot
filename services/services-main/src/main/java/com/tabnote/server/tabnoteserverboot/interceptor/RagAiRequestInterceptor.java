@@ -47,12 +47,8 @@ public class RagAiRequestInterceptor implements HandlerInterceptor {
         if (tabNoteInfiniteEncryption.encryptionTokenCheckIn(bodyJson.getString("id"), bodyJson.getString("token"))) {
             RankAndQuota raq = quotaDeductionPublisher.getQuotaAndRank(bodyJson.getString("id"));
             if (raq == null || !raq.passAFABasic()) {
-                returnRagAdminMess(response, "你的账户没有高级功能授权或者额度已经用完，请访问：https://tabnote.cn/afa 获取授权");
+                returnRagAdminMess(response, "你的账户没有高级功能授权或者额度已经用完，请访问：https://tabnote.cn/afa 查看授权信息");
                 return false;
-            }
-
-            if (securityComponent.haveProblemWord(body, request.getRemoteAddr(), bodyJson.getString("id"), "RAG_AI请求")) {
-                returnRagAdminMess(response, "您的请求存在安全系统触发词，本次请求将会被记录，以下为AI生成内容，AI可能存在幻觉请仔细甄别：\n\n");
             }
 
             return true;

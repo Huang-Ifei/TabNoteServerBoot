@@ -4,80 +4,82 @@ import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.ServiceInstance;
-import org.springframework.cloud.client.discovery.DiscoveryClient;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-//CDN不准确，应该是AI对话缓存/分发微服务
 @Component
 public class CDNAI {
 
     private static final Logger log = LoggerFactory.getLogger(CDNAI.class);
 
-    DiscoveryClient discoveryClient;
+    private static final String KEY_PREFIX = "cai+";
+    private static final long KEY_TTL_SECONDS = 450;
+
+    private StringRedisTemplate redisTemplate;
+
     @Autowired
-    public CDNAI(DiscoveryClient discoveryClient) {
-        this.discoveryClient = discoveryClient;
+    public void setRedisTemplate(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
     }
 
-    RestTemplate restTemplate;
-    @Autowired
-    public void setRestTemplate(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
-    }
-
-    public String getTACADSHost(){
-        String url = "";
-        try{
-            List<ServiceInstance> apiCheckMicroService = discoveryClient.getInstances("TabNote_AI_Cache_And_Delivery_Service");
-            url = "http://" + apiCheckMicroService.get(0).getHost() + ":" + apiCheckMicroService.get(0).getPort();
-        } catch (Exception e) {
-            System.out.println("TabNote_AI_Cache_And_Delivery_Service,TabNote精华爆炸啦！！我的缓存递送微服务爆炸啦！！");
-            log.error(e.getMessage());
-        }
-        return url;
-    }
-
-    public void sendToTACADS(String ca_id,String s){
-
-        JSONObject param = new JSONObject();
-        param.put("cdn_ai_id", ca_id);
-        param.put("JSONList", s);
-        //添加token
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-Type","application/json;charset=UTF-8");
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
-        try{
-            //封装请求头
-            HttpEntity<String> formEntity = new HttpEntity<String>(param.toString(),headers);
-            HttpEntity<String> he = restTemplate.postForEntity(getTACADSHost()+"/push", formEntity, String.class);
-            System.out.println(he.getBody());
-        }catch (Exception e){
-            log.error(e.getMessage());
-        }
-    }
-    public void newTACADS(String ca_id){
-
-        JSONObject param = new JSONObject();
-        param.put("cdn_ai_id", ca_id);
-        param.put("JSONList", "");
-        //添加token
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Content-Type","application/json;charset=UTF-8");
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+    public void newTACADS(String ca_id) {
         try {
-            //封装请求头
-            HttpEntity<String> formEntity = new HttpEntity<String>(param.toString(),headers);
-            HttpEntity<String> he = restTemplate.postForEntity(getTACADSHost()+"/new", formEntity, String.class);
-            System.out.println(he.getBody());
+            redisTemplate.opsForValue().set(KEY_PREFIX + ca_id, "", KEY_TTL_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error(e.getMessage());
+            log.error("CDNAI newTACADS error: {}", e.getMessage());
         }
+    }
+
+    public void sendToTACADS(String ca_id, String s) {
+        try {
+            redisTemplate.opsForValue().append(KEY_PREFIX + ca_id, s + "\n");
+        } catch (Exception e) {
+            log.error("CDNAI sendToTACADS error: {}", e.getMessage());
+        }
+    }
+
+    public String getByIndex(String cdnAiId, int index) {
+        String str = redisTemplate.opsForValue().get(KEY_PREFIX + cdnAiId);
+        if (str == null || str.isEmpty()) {
+            return null;
+        }
+        if (index == 0) {
+            return str;
+        }
+        String[] lines = str.split("\n");
+        int sum = 0;
+        boolean found = false;
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < lines.length; i++) {
+            if (!found) {
+                try {
+                    JSONObject json = JSONObject.parseObject(lines[i]);
+                    JSONObject mess = json.getJSONObject("message");
+                    int len = 0;
+                    if (mess != null) {
+                        String content = mess.getString("content");
+                        if (content != null) {
+                            len += content.codePointCount(0, content.length());
+                        }
+                    }
+                    sum += len;
+                    if (sum == index) {
+                        found = true;
+                    } else if (sum > index) {
+                        return null;
+                    }
+                } catch (Exception e) {
+                    return null;
+                }
+            } else {
+                if (result.length() > 0) {
+                    result.append("\n");
+                }
+                result.append(lines[i]);
+            }
+        }
+        return found ? result.toString() : null;
     }
 }

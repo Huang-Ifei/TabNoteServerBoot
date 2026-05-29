@@ -31,4 +31,10 @@ public interface HomeworkService {
     JSONObject myHomeworkList(String usr_id, String token, String class_id, Integer index);
 
     JSONObject mySubmission(String usr_id, String token, String homework_id);
+
+    JSONObject homeworkStats(String usr_id, String token, String homework_id);
+
+    JSONObject classHomeworkStats(String usr_id, String token, String class_id);
+
+    int learningAnalysis(String usr_id, String token, String class_id, String userRequest, jakarta.servlet.http.HttpServletResponse response, StringBuffer returnString, String cdn_ai_ms, String ai_ms_id) throws Exception;
 }
